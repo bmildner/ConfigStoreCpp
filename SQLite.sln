@@ -1,0 +1,41 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30723.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SQLiteCpp", "SQLiteCpp\SQLiteCpp.vcxproj", "{34D74CB9-C8F4-4CEE-A3C3-D366C8421D13}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Test", "Test\Test.vcxproj", "{126BADE9-D707-421E-A8EA-7DA650733FC4}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F28C73B8-A103-4062-B1D6-A7B5898EDD97} = {F28C73B8-A103-4062-B1D6-A7B5898EDD97}
+		{34D74CB9-C8F4-4CEE-A3C3-D366C8421D13} = {34D74CB9-C8F4-4CEE-A3C3-D366C8421D13}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Configuration", "Configuration\Configuration.vcxproj", "{F28C73B8-A103-4062-B1D6-A7B5898EDD97}"
+	ProjectSection(ProjectDependencies) = postProject
+		{34D74CB9-C8F4-4CEE-A3C3-D366C8421D13} = {34D74CB9-C8F4-4CEE-A3C3-D366C8421D13}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{34D74CB9-C8F4-4CEE-A3C3-D366C8421D13}.Debug|Win32.ActiveCfg = Debug|Win32
+		{34D74CB9-C8F4-4CEE-A3C3-D366C8421D13}.Debug|Win32.Build.0 = Debug|Win32
+		{34D74CB9-C8F4-4CEE-A3C3-D366C8421D13}.Release|Win32.ActiveCfg = Release|Win32
+		{34D74CB9-C8F4-4CEE-A3C3-D366C8421D13}.Release|Win32.Build.0 = Release|Win32
+		{126BADE9-D707-421E-A8EA-7DA650733FC4}.Debug|Win32.ActiveCfg = Debug|Win32
+		{126BADE9-D707-421E-A8EA-7DA650733FC4}.Debug|Win32.Build.0 = Debug|Win32
+		{126BADE9-D707-421E-A8EA-7DA650733FC4}.Release|Win32.ActiveCfg = Release|Win32
+		{126BADE9-D707-421E-A8EA-7DA650733FC4}.Release|Win32.Build.0 = Release|Win32
+		{F28C73B8-A103-4062-B1D6-A7B5898EDD97}.Debug|Win32.ActiveCfg = Debug|Win32
+		{F28C73B8-A103-4062-B1D6-A7B5898EDD97}.Debug|Win32.Build.0 = Debug|Win32
+		{F28C73B8-A103-4062-B1D6-A7B5898EDD97}.Release|Win32.ActiveCfg = Release|Win32
+		{F28C73B8-A103-4062-B1D6-A7B5898EDD97}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
