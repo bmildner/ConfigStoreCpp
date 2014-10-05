@@ -6,14 +6,17 @@
 #include <functional>
 #include <set>
 
+#include "Configuration/Utils.h"
+
+BOOST_INCL_GUARD_BEGIN
 #include <boost/filesystem/operations.hpp>
 #include <boost/format.hpp>
 #include <boost/timer/timer.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
+BOOST_INCL_GUARD_END
 
 #include "Configuration/Configuration.h"
-#include "Configuration/Utils.h"
 
 using namespace std;
 using namespace Configuration;
@@ -222,7 +225,7 @@ namespace
     // TODO: test non-default path delimeter!
     auto store = CreateEmptyStore();
 
-    ReadOnlyTransaction transaction(*store);  // check for writeable transaction in implementation
+    ReadOnlyTransaction transaction(*store);  // check there is no writeable transaction in implementation
 
     // check for const correctness
     static_cast<const Store&>(*store).IsValidName(L"");
@@ -481,7 +484,7 @@ namespace
     auto store = CreateEmptyStore();
 
     using TrackedRevison = pair<Store::Revision, Store::Revision>;  // .first == old value, .second == new/currrent value; (.first == .second) => not changed
-    auto swap = [](TrackedRevison& rev) { Store::Revision temp = rev.first; rev.first = rev.second; rev.second = temp; };
+    auto reset = [](TrackedRevison& rev) { rev.first = rev.second; };
 
     // check for name validation (empty == root)
     UNITTEST_ASSERT_THROWS(store->GetRevision(L".."), InvalidName);
@@ -502,7 +505,7 @@ namespace
 
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
     UNITTEST_ASSERT(rootRev.first != rootRev.second);
-    swap(rootRev);
+    reset(rootRev);
 
     TrackedRevison name1Rev;
 
@@ -528,39 +531,39 @@ namespace
 
     UNITTEST_ASSERT_NO_EXCEPTION(name1Rev.second = store->GetRevision(L"Name1"));
     UNITTEST_ASSERT(name1Rev.first != name1Rev.second);
-    swap(name1Rev);    
+    reset(name1Rev);
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
     UNITTEST_ASSERT(rootRev.first != rootRev.second);
-    swap(rootRev);    
+    reset(rootRev);
 
     store->Set(L"Name1", L"empty");
 
     UNITTEST_ASSERT_NO_EXCEPTION(name1Rev.second = store->GetRevision(L"Name1"));
     UNITTEST_ASSERT(name1Rev.first != name1Rev.second);
-    swap(name1Rev);
+    reset(name1Rev);
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
     UNITTEST_ASSERT(rootRev.first != rootRev.second);
-    swap(rootRev);
+    reset(rootRev);
 
     store->SetOrCreate(L"Name1", Store::Binary(4, 0x10));
 
     UNITTEST_ASSERT_NO_EXCEPTION(name1Rev.second = store->GetRevision(L"Name1"));
     UNITTEST_ASSERT(name1Rev.first != name1Rev.second);
-    swap(name1Rev);
+    reset(name1Rev);
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
     UNITTEST_ASSERT(rootRev.first != rootRev.second);
-    swap(rootRev);
+    reset(rootRev);
     UNITTEST_ASSERT_THROWS(rootRev.second = store->GetRevision(L"Name1.Name2"), EntryNotFound);
 
     store->Create(L"Name1.Name2", 0);
 
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
     UNITTEST_ASSERT(rootRev.first != rootRev.second);
-    swap(rootRev);
+    reset(rootRev);
 
     UNITTEST_ASSERT_NO_EXCEPTION(name1Rev.second = store->GetRevision(L"Name1"));
     UNITTEST_ASSERT(name1Rev.first != name1Rev.second);
-    swap(name1Rev);
+    reset(name1Rev);
 
     TrackedRevison name2Rev;
 
@@ -598,37 +601,37 @@ namespace
 
     UNITTEST_ASSERT_NO_EXCEPTION(name2Rev.second = store->GetRevision(L"Name1.Name2"));
     UNITTEST_ASSERT(name2Rev.first != name2Rev.second);
-    swap(name2Rev);
+    reset(name2Rev);
     UNITTEST_ASSERT_NO_EXCEPTION(name1Rev.second = store->GetRevision(L"Name1"));
     UNITTEST_ASSERT(name1Rev.first != name1Rev.second);
-    swap(name1Rev);
+    reset(name1Rev);
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
     UNITTEST_ASSERT(rootRev.first != rootRev.second);
-    swap(rootRev);
+    reset(rootRev);
 
     store->Set(L"Name1.Name2", L"empty");
 
     UNITTEST_ASSERT_NO_EXCEPTION(name2Rev.second = store->GetRevision(L"Name1.Name2"));
     UNITTEST_ASSERT(name2Rev.first != name2Rev.second);
-    swap(name2Rev);
+    reset(name2Rev);
     UNITTEST_ASSERT_NO_EXCEPTION(name1Rev.second = store->GetRevision(L"Name1"));
     UNITTEST_ASSERT(name1Rev.first != name1Rev.second);
-    swap(name1Rev);
+    reset(name1Rev);
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
     UNITTEST_ASSERT(rootRev.first != rootRev.second);
-    swap(rootRev);
+    reset(rootRev);
 
     store->Set(L"Name1.Name2", Store::Binary(4, 0x10));
 
     UNITTEST_ASSERT_NO_EXCEPTION(name2Rev.second = store->GetRevision(L"Name1.Name2"));
     UNITTEST_ASSERT(name2Rev.first != name2Rev.second);
-    swap(name2Rev);
+    reset(name2Rev);
     UNITTEST_ASSERT_NO_EXCEPTION(name1Rev.second = store->GetRevision(L"Name1"));
     UNITTEST_ASSERT(name1Rev.first != name1Rev.second);
-    swap(name1Rev);
+    reset(name1Rev);
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
     UNITTEST_ASSERT(rootRev.first != rootRev.second);
-    swap(rootRev);
+    reset(rootRev);
     UNITTEST_ASSERT_THROWS(rootRev.second = store->GetRevision(L"Name3"), EntryNotFound);
 
     store->SetOrCreate(L"Name3", 4711);
@@ -639,7 +642,7 @@ namespace
     UNITTEST_ASSERT(name1Rev.first == name1Rev.second);
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
     UNITTEST_ASSERT(rootRev.first != rootRev.second);
-    swap(rootRev);
+    reset(rootRev);
 
     TrackedRevison name3Rev;
 
@@ -684,7 +687,7 @@ namespace
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
     UNITTEST_ASSERT(rootRev.first == rootRev.second);
 
-    // TODO: delete
+    // TODO: delete + TryDelete
     // TOD: check for writeable transaction
   }
 
@@ -863,7 +866,8 @@ namespace
       store->SetOrCreate(L"Test.Transaction.WriteableTransaction.trans3", 0);
 
       {
-        Configuration::WriteableTransaction trans1(*store);
+        // check we support move-construction
+        Configuration::WriteableTransaction trans1 = WriteableTransaction(*store);
 
         store->Set(L"Test.Transaction.WriteableTransaction.trans1.1", 1);
 
