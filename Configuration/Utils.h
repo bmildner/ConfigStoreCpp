@@ -23,6 +23,21 @@
 # endif
 #endif
 
+// "inclusion guard" macros for boost headers, dreaded MSVC code analysis causes warnings in boost headers ...
+# ifdef _MSC_VER
+#  include <codeanalysis\warnings.h>
+
+#  define BOOST_INCL_GUARD_BEGIN  __pragma(warning(push))                                 \
+                                  __pragma(warning(disable: ALL_CODE_ANALYSIS_WARNINGS))  \
+
+#  define BOOST_INCL_GUARD_END    __pragma(warning(pop))
+
+# else
+#  define ATTD_BOOST_INCL_GUARD_BEGIN
+#  define ATTD_BOOST_INCL_GUARD_END
+# endif
+
+
 namespace Configuration
 {
   struct Exception;

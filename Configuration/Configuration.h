@@ -278,7 +278,7 @@ namespace Configuration
       RandomNumberGenerator m_RandomNumberGenerator;
   };
 
-  // 
+  // transactions are non-copyable (incl. move assignment!) but support move construction 
   class ReadOnlyTransaction : private boost::noncopyable
   {
     public:

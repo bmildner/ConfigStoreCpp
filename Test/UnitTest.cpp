@@ -6,14 +6,17 @@
 #include <functional>
 #include <set>
 
+#include "Configuration/Utils.h"
+
+BOOST_INCL_GUARD_BEGIN
 #include <boost/filesystem/operations.hpp>
 #include <boost/format.hpp>
 #include <boost/timer/timer.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
+BOOST_INCL_GUARD_END
 
 #include "Configuration/Configuration.h"
-#include "Configuration/Utils.h"
 
 using namespace std;
 using namespace Configuration;
@@ -863,7 +866,8 @@ namespace
       store->SetOrCreate(L"Test.Transaction.WriteableTransaction.trans3", 0);
 
       {
-        Configuration::WriteableTransaction trans1(*store);
+        // check we support move-construction
+        Configuration::WriteableTransaction trans1 = WriteableTransaction(*store);
 
         store->Set(L"Test.Transaction.WriteableTransaction.trans1.1", 1);
 
