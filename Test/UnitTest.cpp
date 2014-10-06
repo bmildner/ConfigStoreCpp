@@ -27,25 +27,21 @@ namespace
 
   struct FailedUnittestAssertion : RuntimeError {};
 
+  wstring ExceptionToString(const Configuration::Exception& e)
+  {
+    return (boost::wformat(L"exception type: %1%\n\nwhat: %2%") % e.TypeName() % e.What()).str();
+  }
+
   wstring ExceptionToString(const exception& e)
   {
-    wstring what;
-    wstring type;
-
     const Configuration::Exception* ptr = dynamic_cast<const Configuration::Exception*>(&e);
 
     if (ptr != nullptr)
     {
-      what = ptr->What();
-      type = ptr->TypeName();
-    }
-    else
-    {
-      what = NarrowToWideStr(e.what());
-      type = NarrowToWideStr(typeid(e).name());
+      return ExceptionToString(*ptr);
     }
 
-    return (boost::wformat(L"exception type: %1%\n\nwhat: %2%") % type % what).str();
+    return (boost::wformat(L"exception type: %1%\n\nwhat: %2%") % NarrowToWideStr(typeid(e).name()) % NarrowToWideStr(e.what())).str();
   }
 
   wstring UnknownExceptionToString()
@@ -55,7 +51,7 @@ namespace
 
 
 // throws exception if expression x does not evaluate to true
-#define UNITTEST_ASSERT(x) ConditionTest([&]() { return x; }, #x, __FILE__, __LINE__, __FUNCTION__)
+#define UNITTEST_ASSERT(x) ConditionTest([&]() -> bool { return x; }, #x, __FILE__, __LINE__, __FUNCTION__)
 
   void ConditionTest(std::function<bool()> func, const char* functionText, const char* fileName, size_t lineNumber, const char* functionName)
   {
@@ -72,11 +68,6 @@ namespace
       {
         exceptionInfo = L" expression is false";
       }
-    }
-
-    catch (const Configuration::Exception& e)
-    {
-      exceptionInfo = L"\n" + ExceptionToString(e);
     }
 
     catch (const std::exception& e)
@@ -107,11 +98,6 @@ namespace
     {
       func();
       result = true;
-    }
-
-    catch (const Configuration::Exception& e)
-    {
-      exceptionInfo = ExceptionToString(e);
     }
 
     catch (const std::exception& e)
