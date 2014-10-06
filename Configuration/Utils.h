@@ -1,3 +1,6 @@
+// Copyright (c) 2014 by Bertolt Mildner
+// All rights reserved.
+
 #ifndef CONFIGURATION_UTILS_H
 #define CONFIGURATION_UTILS_H
 

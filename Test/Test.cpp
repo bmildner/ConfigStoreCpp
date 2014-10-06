@@ -1,3 +1,6 @@
+// Copyright (c) 2014 by Bertolt Mildner
+// All rights reserved.
+
 #include <iostream>
 
 #include "SQLiteCpp\SQLiteCpp.h"
