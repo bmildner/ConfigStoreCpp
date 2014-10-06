@@ -28,30 +28,49 @@ namespace
 {    
   const wstring DefaultDatabaseFileName = L"unittest.db";
 
+  // TODO: add better converstion to string
   struct FailedUnittestAssertion : RuntimeError {};
 
-  wstring ExceptionToString(const Configuration::Exception& e)
+  namespace Detail
   {
-    return (boost::wformat(L"exception type: %1%\n\nwhat: %2%") % e.TypeName() % e.What()).str();
-  }
-
-  wstring ExceptionToString(const exception& e)
-  {
-    const Configuration::Exception* ptr = dynamic_cast<const Configuration::Exception*>(&e);
-
-    if (ptr != nullptr)
+    wstring ExceptionToString(const Configuration::Exception& e)
     {
-      return ExceptionToString(*ptr);
+      return (boost::wformat(L"exception type: %1%\n\nwhat: %2%") % e.TypeName() % e.What()).str();
     }
 
-    return (boost::wformat(L"exception type: %1%\n\nwhat: %2%") % NarrowToWideStr(typeid(e).name()) % NarrowToWideStr(e.what())).str();
+    wstring ExceptionToString(const exception& e)
+    {
+      return (boost::wformat(L"exception type: %1%\n\nwhat: %2%") % NarrowToWideStr(typeid(e).name()) % NarrowToWideStr(e.what())).str();
+    }
+
+    wstring UnknownExceptionToString()
+    {
+      return L"exception type: <unknown type>\n\nwhat: unknown exception caught";
+    }
   }
 
-  wstring UnknownExceptionToString()
+  wstring ExceptionToString()
   {
-    return L"exception type: <unknown type>\n\nwhat: unknown exception caught";
-  }
+    try
+    {
+      throw;
+    }
 
+    catch (const Configuration::Exception& e)
+    {
+      return Detail::ExceptionToString(e);
+    }
+
+    catch (const std::exception& e)
+    {
+      return Detail::ExceptionToString(e);
+    }
+
+    catch (...)
+    {
+      return Detail::UnknownExceptionToString();
+    }
+  }
 
 // throws exception if expression x does not evaluate to true
 #define UNITTEST_ASSERT(x) ConditionTest([&]() -> bool { return x; }, #x, __FILE__, __LINE__, __FUNCTION__)
@@ -69,24 +88,19 @@ namespace
       }
       else
       {
-        exceptionInfo = L" expression is false";
+        exceptionInfo = L"expression is false";
       }
-    }
-
-    catch (const std::exception& e)
-    {
-      exceptionInfo = L"\n" + ExceptionToString(e);
     }
 
     catch (...)
     {
-      exceptionInfo = L"\n" + UnknownExceptionToString();
+      exceptionInfo = ExceptionToString();
     }
 
     if (!result)
     {
-      throw ExceptionImpl<FailedUnittestAssertion>((boost::wformat(L"UNITTEST_ASSERT(%1%) in %2%#%3% %4% failed with%5%")
-        % functionText % fileName % lineNumber % functionName % exceptionInfo).str());
+      throw ExceptionImpl<FailedUnittestAssertion>((boost::wformat(L"UNITTEST_ASSERT(%1%) in %2%#%3% %4% failed with\n%5%")
+                                                                     % functionText % fileName % lineNumber % functionName % exceptionInfo).str());
     }
   }
 
@@ -94,29 +108,15 @@ namespace
 
   void NoExceptionTest(std::function<void()> func, const char* functionText, const char* fileName, size_t lineNumber, const char* functionName)
   {
-    bool result = false;
-    wstring exceptionInfo;
-
     try
     {
       func();
-      result = true;
-    }
-
-    catch (const std::exception& e)
-    {
-      exceptionInfo = ExceptionToString(e);
     }
 
     catch (...)
     {
-      exceptionInfo = UnknownExceptionToString();
-    }
-
-    if (!result)
-    {
-      throw ExceptionImpl<FailedUnittestAssertion>((boost::wformat(L"UNITTEST_ASSERT_NO_EXCEPTION(%1%) in %2%#%3% %4% failed with\n%5%") 
-                                                                     % functionText % fileName % lineNumber % functionName % exceptionInfo).str());
+      throw ExceptionImpl<FailedUnittestAssertion>((boost::wformat(L"UNITTEST_ASSERT_NO_EXCEPTION(%1%) in %2%#%3% %4% failed with\n%5%")
+                                                                     % functionText % fileName % lineNumber % functionName % ExceptionToString()).str());
     }
   }
 
@@ -127,33 +127,22 @@ namespace
   void ExceptionTest(std::function<void()> func, const char* functionText, const char* exceptionText, const char* fileName, size_t lineNumber, const char* functionName)
   {
     bool result = false;
-    wstring exceptionInfo = L"out any exception beeing caught";
+    wstring exceptionInfo;
 
     try
     {
       func();
+      exceptionInfo = L"out any exception beeing caught";
     }
 
-    catch (const Configuration::Exception& e)
+    catch (const ExceptionImpl<Exception>&)
     {
-      if (typeid(e) == typeid(ExceptionImpl<Exception>))
-      {
-        result = true;
-      }
-      else
-      {
-        exceptionInfo = ExceptionToString(e);
-      }
-    }
-
-    catch (const std::exception& e)
-    {
-      exceptionInfo = ExceptionToString(e);
+      result = true;
     }
 
     catch (...)
-    {      
-      exceptionInfo = UnknownExceptionToString();
+    {
+      exceptionInfo = ExceptionToString();
     }
 
     if (!result)
@@ -848,11 +837,11 @@ namespace
 
     // check nested writeable transaction
     {
-      store->SetOrCreate(L"Test.Transaction.WriteableTransaction.trans1.1", 0);
-      store->SetOrCreate(L"Test.Transaction.WriteableTransaction.trans1.2", 0);
-      store->SetOrCreate(L"Test.Transaction.WriteableTransaction.trans2.1", 0);
-      store->SetOrCreate(L"Test.Transaction.WriteableTransaction.trans2.2", 0);
-      store->SetOrCreate(L"Test.Transaction.WriteableTransaction.trans3", 0);
+      store->Create(L"Test.Transaction.WriteableTransaction.trans1.1", 0);
+      store->Create(L"Test.Transaction.WriteableTransaction.trans1.2", 0);
+      store->Create(L"Test.Transaction.WriteableTransaction.trans2.1", 0);
+      store->Create(L"Test.Transaction.WriteableTransaction.trans2.2", 0);
+      store->Create(L"Test.Transaction.WriteableTransaction.trans3", 0);
 
       {
         // check we support move-construction
@@ -892,11 +881,11 @@ namespace
     }
     // check inner transaction rollback with nested writeable transaction
     {
-      store->SetOrCreate(L"Test.Transaction.WriteableTransaction.trans1.1", 0);
-      store->SetOrCreate(L"Test.Transaction.WriteableTransaction.trans1.2", 0);
-      store->SetOrCreate(L"Test.Transaction.WriteableTransaction.trans2.1", 0);
-      store->SetOrCreate(L"Test.Transaction.WriteableTransaction.trans2.2", 0);
-      store->SetOrCreate(L"Test.Transaction.WriteableTransaction.trans3", 0);
+      store->Set(L"Test.Transaction.WriteableTransaction.trans1.1", 0);
+      store->Set(L"Test.Transaction.WriteableTransaction.trans1.2", 0);
+      store->Set(L"Test.Transaction.WriteableTransaction.trans2.1", 0);
+      store->Set(L"Test.Transaction.WriteableTransaction.trans2.2", 0);
+      store->Set(L"Test.Transaction.WriteableTransaction.trans3", 0);
 
       {
         Configuration::WriteableTransaction trans1(*store);
@@ -1052,15 +1041,9 @@ namespace Configuration
           test.first();
         }
 
-        catch (const exception& e)
-        {
-          wcerr << ExceptionToString(e) << endl;
-          result = false;
-        }
-
         catch (...)
         {
-          wcerr << L"Unknown exception caught" << endl;
+          wcerr << ExceptionToString();
           result = false;
         }
       }

@@ -78,6 +78,7 @@ namespace Configuration
       // - conttain multiple consecutive delimeters
       // - be empty
       // Note: no Unicode normalization is done before comparison of names or writeing them into the database!
+      // TODO: move implementation into static function
       bool IsValidName(const String& name) const;
 
       bool Exists(const String& name) const;
@@ -229,6 +230,8 @@ namespace Configuration
       void TraverseChildren(Integer id, std::function<void(Integer)> func) const;
 
       CachedStatement GetStatement(const std::string& statementText) const;
+
+      // TODO: move all string constants out of class!
 
       // table names
       static const std::string Table_Settings;
