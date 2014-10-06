@@ -11,13 +11,13 @@
 
 #include "Configuration/Utils.h"
 
-BOOST_INCL_GUARD_BEGIN
+CONFIGURATION_BOOST_INCL_GUARD_BEGIN
 #include <boost/filesystem/operations.hpp>
 #include <boost/format.hpp>
 #include <boost/timer/timer.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
-BOOST_INCL_GUARD_END
+CONFIGURATION_BOOST_INCL_GUARD_END
 
 #include "Configuration/Configuration.h"
 

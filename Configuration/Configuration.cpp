@@ -10,12 +10,12 @@
 
 #include "Utils.h"
 
-BOOST_INCL_GUARD_BEGIN
+CONFIGURATION_BOOST_INCL_GUARD_BEGIN
 #include <boost/format.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/random/random_device.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
-BOOST_INCL_GUARD_END
+CONFIGURATION_BOOST_INCL_GUARD_END
 
 using namespace std;
 

@@ -20,9 +20,9 @@
 # elif defined(__clang__) && __has_feature(cxx_noexcept)
 // Clang 3.0 and above have noexcept
 # elif defined(_MSC_VER) && (_MSC_VER >= 1900)
-// MSVC 2014
+// MSVC 2014 and above should have noexcept!?
 # else
-#  define noexcept    throw()
+#  define noexcept throw()
 # endif
 #endif
 
@@ -30,14 +30,14 @@
 # ifdef _MSC_VER
 #  include <codeanalysis\warnings.h>
 
-#  define BOOST_INCL_GUARD_BEGIN  __pragma(warning(push))                                 \
-                                  __pragma(warning(disable: ALL_CODE_ANALYSIS_WARNINGS))  \
+#  define CONFIGURATION_BOOST_INCL_GUARD_BEGIN  __pragma(warning(push))                                 \
+                                                __pragma(warning(disable: ALL_CODE_ANALYSIS_WARNINGS))  \
 
-#  define BOOST_INCL_GUARD_END    __pragma(warning(pop))
+#  define CONFIGURATION_BOOST_INCL_GUARD_END    __pragma(warning(pop))
 
 # else
-#  define ATTD_BOOST_INCL_GUARD_BEGIN
-#  define ATTD_BOOST_INCL_GUARD_END
+#  define CONFIGURATION_BOOST_INCL_GUARD_BEGIN
+#  define CONFIGURATION_BOOST_INCL_GUARD_END
 # endif
 
 
