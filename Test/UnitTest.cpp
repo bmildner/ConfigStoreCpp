@@ -81,7 +81,7 @@ namespace
     }
   }
 
-// throws exception if expression x does not evaluate to true
+// throws FailedUnittestAssertion exception if expression x does not evaluate to true or throws an exception
 #define UNITTEST_ASSERT(x) ConditionTest([&]() -> bool { return x; }, #x, __FILE__, __LINE__, __FUNCTION__)
 
   void ConditionTest(std::function<bool()> func, const char* functionText, const char* fileName, size_t lineNumber, const char* functionName)
@@ -113,6 +113,7 @@ namespace
     }
   }
 
+// throws FailedUnittestAssertion exception if expression x throws an exception
 #define UNITTEST_ASSERT_NO_EXCEPTION(x) NoExceptionTest([&]() { x; }, #x, __FILE__, __LINE__, __FUNCTION__)
 
   void NoExceptionTest(std::function<void()> func, const char* functionText, const char* fileName, size_t lineNumber, const char* functionName)
@@ -675,7 +676,7 @@ namespace
     UNITTEST_ASSERT(rootRev.first == rootRev.second);
 
     // TODO: delete + TryDelete
-    // TOD: check for writeable transaction
+    // TODO: check for writeable transaction
   }
 
   void TestCreate()

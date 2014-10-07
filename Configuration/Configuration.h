@@ -280,6 +280,7 @@ namespace Configuration
 
   private:
     bool                                 m_Commited;
+    std::string                          m_SavepointName;
     std::shared_ptr<SQLite::Transaction> m_Transaction;
   };
 

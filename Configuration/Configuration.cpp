@@ -360,7 +360,7 @@ namespace Configuration
         }
       }
 
-      map<Integer, size_t> brokenLinks;
+      map<Integer, Integer> brokenLinks;  // id + counter
 
       // traverse all entries from root according to linking and remove them from our entries set
       TraverseChildren(0, [&entries, &brokenLinks](Integer id)
@@ -1337,11 +1337,12 @@ namespace Configuration
   }
 
   WriteableTransaction::WriteableTransaction(Store& store)
-  : m_Commited(false), m_Transaction(store.GetTransaction(true))
+  : m_Commited(false), m_SavepointName(), m_Transaction(store.GetTransaction(true))
   {
     if (!m_Transaction.unique())
     {
-      m_Transaction->SetSavepoint((boost::format("Configuration_Stor_%1%") % static_cast<void*>(this)).str());
+      m_SavepointName = (boost::format("Config_Store_%1%") % static_cast<void*>(this)).str();
+      m_Transaction->SetSavepoint(m_SavepointName);
     }
   }
 
@@ -1349,9 +1350,9 @@ namespace Configuration
   {
     try
     {
-      if (!m_Commited && !m_Transaction.unique())
+      if (!m_Commited && !m_SavepointName.empty())
       {
-        m_Transaction->RollbackSavepoint((boost::format("Configuration_Stor_%1%") % static_cast<void*>(this)).str());
+        m_Transaction->RollbackSavepoint(m_SavepointName);
       }
     }
     catch (...)
@@ -1362,9 +1363,9 @@ namespace Configuration
 
   void WriteableTransaction::Commit()
   {
-    if (!m_Transaction.unique())
+    if (!m_SavepointName.empty())
     {
-      m_Transaction->ReleaseSavepoint((boost::format("Configuration_Stor_%1%") % static_cast<void*>(this)).str());
+      m_Transaction->ReleaseSavepoint(m_SavepointName);
     }
     else
     {
