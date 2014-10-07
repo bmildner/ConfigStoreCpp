@@ -17,6 +17,8 @@ CONFIGURATION_BOOST_INCL_GUARD_BEGIN
 #include <boost/random/uniform_int_distribution.hpp>
 CONFIGURATION_BOOST_INCL_GUARD_END
 
+// TODO: maybe we schould define SQLITECPP_ENABLE_ASSERT_HANDLER !?1
+
 using namespace std;
 
 namespace 
@@ -424,7 +426,7 @@ namespace Configuration
     return m_Delimeter;
   }
 
-  bool Store::IsValidName(const String& name) const
+  bool Store::IsValidName(const String& name, String::value_type delimeter)
   {
     // must not be empty
     if (name.empty())
@@ -433,13 +435,13 @@ namespace Configuration
     }
 
     // must not start or end with delimeter
-    if ((name.front() == m_Delimeter) || (*name.crbegin() == m_Delimeter))
+    if ((name.front() == delimeter) || (name.back() == delimeter))
     {
       return false;
     }
 
     // must not contain multiple consecutive delimeters
-    if (name.find(String(2, m_Delimeter)) != String::npos)
+    if (name.find(String(2, delimeter)) != String::npos)
     {
       return false;
     }

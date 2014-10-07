@@ -78,8 +78,12 @@ namespace Configuration
       // - conttain multiple consecutive delimeters
       // - be empty
       // Note: no Unicode normalization is done before comparison of names or writeing them into the database!
-      // TODO: move implementation into static function
-      bool IsValidName(const String& name) const;
+      inline bool IsValidName(const String& name) const
+      {
+        return IsValidName(name, m_Delimeter);
+      }
+      // only use if you really have to validate a name w/o an Store object in hand!
+      static bool IsValidName(const String& name, String::value_type delimeter);
 
       bool Exists(const String& name) const;
 
