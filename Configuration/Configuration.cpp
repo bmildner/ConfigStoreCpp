@@ -324,7 +324,7 @@ namespace Configuration
 
           while (stm2->executeStep())
           {
-            badEntries.emplace_back(stm2->getColumn(0).getInt64());
+            badEntries.push_back(stm2->getColumn(0).getInt64());
           }
         }
       }
@@ -354,7 +354,7 @@ namespace Configuration
 
       while (stm->executeStep())
       {
-        if (!entries.emplace(stm->getColumn(0).getInt64()).second)  // ids must be unique
+        if (!entries.insert(stm->getColumn(0).getInt64()).second)  // ids must be unique
         {
           throw ExceptionImpl<EntryIdNotUnique>((boost::wformat(L"There are multiple entries with id: %1%") % stm->getColumn(0).getInt64()).str());
         }
@@ -561,11 +561,11 @@ namespace Configuration
     return idPath;
   }
 
-  Store::IdList Store::GetEntryId(const String& name, Integer parent) const
+  Store::IdList Store::GetEntryId(const String& entryName, Integer parent) const
   {
     Path path;
 
-    path.emplace_back(name);
+    path.push_back(entryName);
 
     return GetEntryId(path, parent);
   }
@@ -973,7 +973,7 @@ namespace Configuration
 
     while (stm->executeStep())
     {
-      ids.emplace_back(stm->getColumn(0).getInt64());
+      ids.push_back(stm->getColumn(0).getInt64());
     }
 
     return ids;
@@ -992,7 +992,7 @@ namespace Configuration
 
     while (stm->executeStep())
     {
-      children.emplace_back(UTF8ToWchar(stm->getColumn(0).getText()));
+      children.push_back(UTF8ToWchar(stm->getColumn(0).getText()));
     }
 
     return children;

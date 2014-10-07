@@ -195,7 +195,7 @@ namespace Configuration
       bool GetEntryId(IdList& idPath, const Path& path, Integer parent = 0) const;
       IdList GetEntryId(const Path& path, Integer parent = 0) const;
       bool GetEntryId(IdList& idPath, const String& name, Integer parent = 0) const;
-      IdList GetEntryId(const String& name, Integer parent = 0) const;
+      IdList GetEntryId(const String& entryName, Integer parent = 0) const;
 
 
       using ValueBinder = std::function<void(int, SQLite::Statement&)>;
