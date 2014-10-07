@@ -28,11 +28,15 @@ namespace
 {    
   const wstring DefaultDatabaseFileName = L"unittest.db";
 
-  // TODO: add better converstion to string
   struct FailedUnittestAssertion : RuntimeError {};
 
   namespace Detail
   {
+    wstring ExceptionToString(const FailedUnittestAssertion& e)
+    {
+      return e.What();
+    }
+
     wstring ExceptionToString(const Configuration::Exception& e)
     {
       return (boost::wformat(L"exception type: %1%\n\nwhat: %2%") % e.TypeName() % e.What()).str();
@@ -54,6 +58,11 @@ namespace
     try
     {
       throw;
+    }
+
+    catch (const FailedUnittestAssertion& e)
+    {
+      return Detail::ExceptionToString(e);
     }
 
     catch (const Configuration::Exception& e)
@@ -99,7 +108,7 @@ namespace
 
     if (!result)
     {
-      throw ExceptionImpl<FailedUnittestAssertion>((boost::wformat(L"UNITTEST_ASSERT(%1%) in %2%#%3% %4% failed with\n%5%")
+      throw ExceptionImpl<FailedUnittestAssertion>((boost::wformat(L"UNITTEST_ASSERT(%1%)\nin %2%#%3% %4%\nfailed with %5%")
                                                                      % functionText % fileName % lineNumber % functionName % exceptionInfo).str());
     }
   }
@@ -115,7 +124,7 @@ namespace
 
     catch (...)
     {
-      throw ExceptionImpl<FailedUnittestAssertion>((boost::wformat(L"UNITTEST_ASSERT_NO_EXCEPTION(%1%) in %2%#%3% %4% failed with\n%5%")
+      throw ExceptionImpl<FailedUnittestAssertion>((boost::wformat(L"UNITTEST_ASSERT_NO_EXCEPTION(%1%)\nin %2%#%3% %4%\nfailed with %5%")
                                                                      % functionText % fileName % lineNumber % functionName % ExceptionToString()).str());
     }
   }
@@ -147,7 +156,7 @@ namespace
 
     if (!result)
     {
-      throw ExceptionImpl<FailedUnittestAssertion>((boost::wformat(L"UNITTEST_ASSERT_THROWS(%1%, %2%) in %3%#%4% %5% failed with\n%6%") 
+      throw ExceptionImpl<FailedUnittestAssertion>((boost::wformat(L"UNITTEST_ASSERT_THROWS(%1%, %2%)\nin %3%#%4% %5%\nfailed with %6%") 
                                                                      % functionText % exceptionText % fileName % lineNumber % functionName % exceptionInfo).str());
     }
   }
@@ -1043,7 +1052,7 @@ namespace Configuration
 
         catch (...)
         {
-          wcerr << ExceptionToString();
+          wcerr << L"\n" << ExceptionToString() << L"\n\n";
           result = false;
         }
       }
