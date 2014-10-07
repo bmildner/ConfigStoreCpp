@@ -235,36 +235,6 @@ namespace Configuration
 
       CachedStatement GetStatement(const std::string& statementText) const;
 
-      // TODO: move all string constants out of class!
-
-      // table names
-      static const std::string Table_Settings;
-      static const std::string Table_Entries;
-
-      // table columns
-      static const std::string Table_Settings_Column_Name;
-      static const std::string Table_Settings_Column_Value;
-
-      static const std::string Table_Entries_Column_Id;
-      static const std::string Table_Entries_Column_Parent;
-      static const std::string Table_Entries_Column_Name;
-      static const std::string Table_Entries_Column_Revision;
-      static const std::string Table_Entries_Column_Type;
-      static const std::string Table_Entries_Column_Value;
-
-      // indexes
-      static const std::string Table_Entries_Name_Index;
-      static const std::string Table_Entries_Parent_Index;
-      static const std::string Table_Entries_Name_Parent_Index;
-
-      // root entry name
-      static const std::string Table_Entries_RootEntry;
-
-      // settings
-      static const std::string Setting_MajorVersion;
-      static const std::string Setting_MinorVersion;
-      static const std::string Setting_NameDelimeter;
-
       static const Integer CurrentMajorVersion;
       static const Integer CurrentMinorVersion;
 

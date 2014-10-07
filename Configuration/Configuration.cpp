@@ -23,6 +23,29 @@ using namespace std;
 
 namespace 
 {
+  const string Table_Settings = "Settings";
+  const string Table_Entries = "Entries";
+
+  const std::string Table_Settings_Column_Name = "Name";
+  const std::string Table_Settings_Column_Value = "Value";
+
+  const std::string Table_Entries_Column_Id = "Id";
+  const std::string Table_Entries_Column_Parent = "Parent";
+  const std::string Table_Entries_Column_Name = "Name";
+  const std::string Table_Entries_Column_Revision = "Revision";
+  const std::string Table_Entries_Column_Type = "Type";
+  const std::string Table_Entries_Column_Value = "Value";
+
+  const std::string Table_Entries_Name_Index = "TableEntries_Name";
+  const std::string Table_Entries_Parent_Index = "TableEntries_Parent";
+  const std::string Table_Entries_Name_Parent_Index = "TableEntries_Name_Parent";
+
+  const std::string Table_Entries_RootEntry = "Root";
+
+  const std::string Setting_MajorVersion = "MajorVersion";
+  const std::string Setting_MinorVersion = "MinorVersion";
+  const std::string Setting_NameDelimeter = "NameDelimeter";
+
   wstring SQLiteDataTypeToStr(int type)
   {
     switch (type)
@@ -74,30 +97,6 @@ namespace Configuration
         boost::random::uniform_int_distribution<Store::Integer> m_Distribution;
     };
   }
-
-
-  const string Store::Table_Settings = "Settings";
-  const string Store::Table_Entries  = "Entries";
-
-  const std::string Store::Table_Settings_Column_Name  = "Name";
-  const std::string Store::Table_Settings_Column_Value = "Value";
-
-  const std::string Store::Table_Entries_Column_Id       = "Id";
-  const std::string Store::Table_Entries_Column_Parent   = "Parent";
-  const std::string Store::Table_Entries_Column_Name     = "Name";
-  const std::string Store::Table_Entries_Column_Revision = "Revision";
-  const std::string Store::Table_Entries_Column_Type     = "Type";
-  const std::string Store::Table_Entries_Column_Value    = "Value";
-
-  const std::string Store::Table_Entries_Name_Index        = "TableEntries_Name";
-  const std::string Store::Table_Entries_Parent_Index      = "TableEntries_Parent";
-  const std::string Store::Table_Entries_Name_Parent_Index = "TableEntries_Name_Parent";
-
-  const std::string Store::Table_Entries_RootEntry = "Root";
-
-  const std::string Store::Setting_MajorVersion  = "MajorVersion";
-  const std::string Store::Setting_MinorVersion  = "MinorVersion";
-  const std::string Store::Setting_NameDelimeter = "NameDelimeter";
 
   const Store::Integer Store::CurrentMajorVersion = 1;
   const Store::Integer Store::CurrentMinorVersion = 0;
