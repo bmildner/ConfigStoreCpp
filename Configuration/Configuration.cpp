@@ -979,7 +979,7 @@ namespace Configuration
     return ids;
   }
 
-  Store::Children Store::GetChildren(Integer parent) const
+  Store::Children Store::GetChildEntryNames(Integer parent) const
   {
     assert(m_Transaction.lock());
 
@@ -1002,7 +1002,7 @@ namespace Configuration
   {
     ReadOnlyTransaction transaction(*this);
 
-    return GetChildren(name.empty() ? 0 : GetEntryId(ParseName(name)).back());
+    return GetChildEntryNames(name.empty() ? 0 : GetEntryId(ParseName(name)).back());
   }
 
   Store::ValueType Store::GetType(const String& name) const

@@ -206,8 +206,7 @@ namespace Configuration
       Integer GetEntryRevision(Integer id) const;
 
       Integer GetRandomRevision();
-      // bumps revision of the root entry and all ids in idPath
-      // idPath may be empty
+      // bumps revision of the root entry and all ids in idPath, idPath may be empty
       void UpdateRevision(IdList::const_iterator first, IdList::const_iterator last);
 
       void SetEntry(const IdList& idPath, ValueType type, const ValueBinder& bindValue);
@@ -222,7 +221,7 @@ namespace Configuration
       void GetEntryValue(const Path& path, ValueType type, const ValueGetter& getValue) const;
 
       IdList GetChildEntries(Integer parent) const;
-      Children GetChildren(Integer parent) const;
+      Children GetChildEntryNames(Integer parent) const;
 
       // do not use directly, always call TryDeleteEntry() !
       bool TryDeleteEntryImpl(Integer id, bool recursive);
