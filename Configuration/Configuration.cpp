@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <set>
 #include <map>
+#include <tuple>
 
 #include "Utils.h"
 
@@ -349,25 +350,72 @@ namespace Configuration
       // get id of ALL entries except root entry
       set<Integer> entries;
 
+      // TODO: find better name for IdCounterMap
+      using IdCounterMap = map<Integer, Integer>;  // id + counter
+
+      IdCounterMap duplicateIds;
+
       static const string Statement3 = "SELECT " + Table_Entries_Column_Id + " FROM " + Table_Entries + " WHERE " + Table_Entries_Column_Id + " != 0";
       auto stm = GetStatement(Statement3);
 
       while (stm->executeStep())
-      {
-        if (!entries.insert(stm->getColumn(0).getInt64()).second)  // ids must be unique
+      {        
+        bool inserted;
+
+        Integer id = stm->getColumn(0).getInt64();
+
+        tie(ignore, inserted) = entries.insert(id);
+
+        if (!inserted)  // ids must be unique
         {
-          throw ExceptionImpl<EntryIdNotUnique>((boost::wformat(L"There are multiple entries with id: %1%") % stm->getColumn(0).getInt64()).str());
+          // insert id into duplicateIds or increment counter if already present
+          IdCounterMap::iterator iter;
+          bool inserted;
+
+          tie(iter, inserted) = duplicateIds.insert(make_pair(id, 1));
+
+          if (!inserted)
+          {
+            iter->second++;
+          }
+        }
+
+        if (!duplicateIds.empty())
+        {
+          String ids;
+
+          for (auto id : duplicateIds)
+          {
+            if (!ids.empty())
+            {
+              ids += L' ';
+            }
+
+            ids += (boost::wformat(L"(id: %1%, count: %2%)") % id.first % id.second).str();
+          }
+
+          throw ExceptionImpl<EntryIdNotUnique>((boost::wformat(L"Found %1% entry ids that are not unique: %2%") % duplicateIds.size() % ids).str());
         }
       }
 
-      map<Integer, Integer> brokenLinks;  // id + counter
+      IdCounterMap brokenLinks;
 
       // traverse all entries from root according to linking and remove them from our entries set
       TraverseChildren(0, [&entries, &brokenLinks](Integer id)
       { 
-        if (entries.erase(id) != 1) 
+        // each entry may only be a child of one parent entry
+        if (entries.erase(id) != 1)
         {
-          brokenLinks.insert(make_pair(id, 0)).first->second++;
+          // add id to broken link list or increment counter if already in broken link list
+          IdCounterMap::iterator iter;
+          bool inserted;
+
+          tie(iter, inserted) = brokenLinks.insert(make_pair(id, 1));
+
+          if (!inserted)
+          {
+            iter->second++;
+          }
         }
       });
       
@@ -1315,7 +1363,10 @@ namespace Configuration
     {
       CachedStatement stm = make_shared<CachedStatement::element_type>(m_Database, statementText);
 
-      m_StatementCache.insert(make_pair(statementText, stm));
+      bool inserted;
+      tie(ignore, inserted) = m_StatementCache.insert(make_pair(statementText, stm));
+
+      assert(inserted);
 
       return stm;
     }
