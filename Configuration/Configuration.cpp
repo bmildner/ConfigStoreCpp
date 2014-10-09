@@ -45,7 +45,7 @@ namespace
 
   const std::string Setting_MajorVersion = "MajorVersion";
   const std::string Setting_MinorVersion = "MinorVersion";
-  const std::string Setting_NameDelimeter = "NameDelimeter";
+  const std::string Setting_NameDelimiter = "NameDelimiter";
 
   wstring SQLiteDataTypeToStr(int type)
   {
@@ -102,16 +102,16 @@ namespace Configuration
   const Store::Integer Store::CurrentMajorVersion = 1;
   const Store::Integer Store::CurrentMinorVersion = 0;
 
-  const Store::String::value_type Store::DefaultNameDelimeter = L'.';
+  const Store::String::value_type Store::DefaultNameDelimiter = L'.';
 
   const Store::ValueType        Store::DefaultEntryValueType = ValueType::Integer;
   const Store::DefaultEntryType Store::DefaultEntryValue = 0;
 
 
   // TODO: check if we should use SQLITE_OPEN_NOMUTEX instead of SQLITE_OPEN_FULLMUTEX and/or if we can be really multi-thread save with SQLITE_OPEN_FULLMUTEX!?
-  Store::Store(const wstring& fileName, bool create, wchar_t nameDelimeter)
+  Store::Store(const wstring& fileName, bool create, wchar_t nameDelimiter)
   : m_Database(WcharToUTF8(fileName), SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_READWRITE | (create ? SQLITE_OPEN_CREATE : 0)),
-  m_DatabaseVersionMajor(0), m_DatabaseVersionMinor(0), m_Delimeter()
+  m_DatabaseVersionMajor(0), m_DatabaseVersionMinor(0), m_Delimiter()
   {
 
     // set busy timeout
@@ -132,6 +132,8 @@ namespace Configuration
     m_Database.exec("PRAGMA locking_mode       = NORMAL");
     m_Database.exec("PRAGMA recursive_triggers = TRUE");
     m_Database.exec("PRAGMA secure_delete      = TRUE");
+
+    // TODO: add code to check or create our database layout! (define structure only once!)
 
     // create tables
     m_Database.exec("CREATE TABLE IF NOT EXISTS " + Table_Settings + "(" + Table_Settings_Column_Name +  " TEXT  PRIMARYKEY, " +
@@ -160,7 +162,7 @@ namespace Configuration
     m_Database.exec("PRAGMA foreign_key_check");
 
     // get config and do minimal sanity-check on data in db
-    GetAndCheckConfiguration(nameDelimeter);
+    GetAndCheckConfiguration(nameDelimiter);
     CheckOrSetRootEntry();
 
     transaction.Commit();
@@ -170,7 +172,7 @@ namespace Configuration
   {
   }
 
-  void Store::GetAndCheckConfiguration(wchar_t nameDelimeter)
+  void Store::GetAndCheckConfiguration(wchar_t nameDelimiter)
   {
     // open writeable transaction
     WriteableTransaction transaction(*this);
@@ -199,28 +201,28 @@ namespace Configuration
         (boost::wformat(L"Database version %1%.%2%") % m_DatabaseVersionMajor % m_DatabaseVersionMinor).str());
     }
 
-    // get and check name delimeter
-    if (!SettingExists(Setting_NameDelimeter))
+    // get and check name delimiter
+    if (!SettingExists(Setting_NameDelimiter))
     {
-      SetSetting(Setting_NameDelimeter, String(1, nameDelimeter));
-      m_Delimeter = DefaultNameDelimeter;
+      SetSetting(Setting_NameDelimiter, String(1, nameDelimiter));
+      m_Delimiter = nameDelimiter;
     }
     else
     {
-      String delimeter = GetSettingStr(Setting_NameDelimeter);
+      String delimiter = GetSettingStr(Setting_NameDelimiter);
 
-      if (delimeter.size() != 1)
+      if (delimiter.size() != 1)
       {
         throw ExceptionImpl<InvalidConfiguration>(
-          (boost::wformat(L"Invalid value for %1% setting (%2%)") % UTF8ToWchar(Setting_NameDelimeter) % delimeter).str());
+          (boost::wformat(L"Invalid value for %1% setting (%2%)") % UTF8ToWchar(Setting_NameDelimiter) % delimiter).str());
       }
 
-      m_Delimeter = delimeter.at(0);
-
-      if (m_Delimeter != nameDelimeter)
+      if (delimiter.size() != 1)
       {
-        throw ExceptionImpl<DelimeterMissmatch>((boost::wformat(L"Expected delimeter \"%1%\" but found \"%2%\" in configuration.") % nameDelimeter % m_Delimeter).str());
+        throw ExceptionImpl<InvalidDelimiterSetting>((boost::wformat(L"Expected delimiter string with length 1 in configuration but found %1%.") % delimiter).str());
       }
+
+      m_Delimiter = delimiter.at(0);
     }
 
     transaction.Commit();
@@ -304,18 +306,19 @@ namespace Configuration
   {
     ReadOnlyTransaction transaction(*this);
 
-    // find all entries with a delimeter in name
+    // find all entries with a delimiter in name
     {
       vector<Integer> badEntries;
 
-      static const string Statement1 = "SELECT DISTINCT " + Table_Entries_Column_Name + " FROM " + Table_Entries;
+      // our root entry always has name "Root" even if this is not a valid name due to demimiter setting!
+      static const string Statement1 = "SELECT DISTINCT " + Table_Entries_Column_Name + " FROM " + Table_Entries + " WHERE " + Table_Entries_Column_Id + " != 0";
       auto stm = GetStatement(Statement1);
 
       while (stm->executeStep())
       {      
         string name = stm->getColumn(0).getText();
 
-        if (UTF8ToWchar(name).find(m_Delimeter) != String::npos)
+        if (UTF8ToWchar(name).find(m_Delimiter) != String::npos)
         {
           static const string Statement2 = "SELECT " + Table_Entries_Column_Id + " FROM " + Table_Entries +
                                              " WHERE " + Table_Entries_Column_Name + " = ?1";
@@ -332,11 +335,11 @@ namespace Configuration
 
       if (!badEntries.empty())
       {
-        wstring msg = (boost::wformat(L"Found following %1% entries with name delimeter in name: ") % badEntries.size()).str();
+        wstring msg = (boost::wformat(L"Found following %1% entries with name delimiter in name: ") % badEntries.size()).str();
       
         for (auto i : badEntries)
         {
-          msg += (boost::wformat(L" %2%, ") % i).str();
+          msg += (boost::wformat(L" %1%, ") % i).str();
         }
 
         msg.resize(msg.size() - 2);
@@ -468,12 +471,12 @@ namespace Configuration
 
 
 
-  Store::String::value_type Store::GetNameDelimeter() const noexcept
+  Store::String::value_type Store::GetNameDelimiter() const noexcept
   {
-    return m_Delimeter;
+    return m_Delimiter;
   }
 
-  bool Store::IsValidName(const String& name, String::value_type delimeter)
+  bool Store::IsValidName(const String& name, String::value_type delimiter)
   {
     // must not be empty
     if (name.empty())
@@ -481,14 +484,14 @@ namespace Configuration
       return false;
     }
 
-    // must not start or end with delimeter
-    if ((name.front() == delimeter) || (name.back() == delimeter))
+    // must not start or end with delimiter
+    if ((name.front() == delimiter) || (name.back() == delimiter))
     {
       return false;
     }
 
-    // must not contain multiple consecutive delimeters
-    if (name.find(String(2, delimeter)) != String::npos)
+    // must not contain multiple consecutive delimiters
+    if (name.find(String(2, delimiter)) != String::npos)
     {
       return false;
     }
@@ -503,22 +506,22 @@ namespace Configuration
       throw ExceptionImpl<InvalidName>(L"Invalid name: " + name);
     }
     
-    String delimeter;
-    delimeter += m_Delimeter;    
+    String delimiter;
+    delimiter += m_Delimiter;    
 
     using Tok = boost::tokenizer<boost::char_separator<String::value_type>, String::const_iterator, String>;
 
-    Tok tok(name, boost::char_separator<String::value_type>(delimeter.c_str(), 0));
+    Tok tok(name, boost::char_separator<String::value_type>(delimiter.c_str(), 0));
 
-    return Path(tok.begin(), tok.end());
+    return Path(begin(tok), end(tok));
   }
 
   Store::String Store::PathToName(const Path& path) const
   {
     String str;
-    String::value_type delim = m_Delimeter;
+    String::value_type delim = m_Delimiter;
 
-    for_each(path.begin(), path.end(), [=, &str](const String& name) { if (!str.empty()) str += delim; str += name; });
+    for_each(begin(path), end(path), [=, &str](const String& name) { if (!str.empty()) str += delim; str += name; });
 
     return str;
   }
@@ -550,7 +553,8 @@ namespace Configuration
 
     static const string Statement = "SELECT " + Table_Entries_Column_Id + " FROM " + Table_Entries +
                                       " WHERE " + Table_Entries_Column_Name + " = ?1 AND " +
-                                                  Table_Entries_Column_Parent + " = ?2";
+                                                  Table_Entries_Column_Parent + " = ?2 AND " +
+                                                  Table_Entries_Column_Id + " != 0";
     auto stm = GetStatement(Statement);
 
     stm->bind(1, WcharToUTF8(name));
@@ -570,10 +574,10 @@ namespace Configuration
 
   bool Store::GetEntryId(IdList& idPath, Path::const_iterator& lastValid, const Path& path, Integer parent) const
   {
-    lastValid = path.end();
+    lastValid = end(path);
     idPath.clear();
 
-    for (auto iter = path.begin(); iter != path.end(); iter++)
+    for (auto iter = begin(path); iter != end(path); iter++)
     {
       if (!GetEntryId(idPath, *iter, !idPath.empty() ? idPath.back() : parent))
       {
@@ -735,7 +739,7 @@ namespace Configuration
 
     stm->exec();
 
-    UpdateRevision(idPath.begin(), idPath.end());
+    UpdateRevision(begin(idPath), end(idPath));
   }
 
   void Store::SetEntry(const String& name, ValueType type, const ValueBinder& bindValue)
@@ -822,7 +826,7 @@ namespace Configuration
     WriteableTransaction transaction(*this);
 
     IdList idPath;
-    auto   lastValid = path.end();
+    auto   lastValid = end(path);
   
     assert(!path.empty());
 
@@ -830,17 +834,17 @@ namespace Configuration
     // GetEntryId() will stop at the last valid/found entry in the path
     if (!GetEntryId(idPath, lastValid, path))
     {
-      assert((idPath.empty()) && (lastValid == path.end()) || ((!idPath.empty()) && (lastValid != path.end())));
+      assert((idPath.empty()) && (lastValid == end(path)) || ((!idPath.empty()) && (lastValid != end(path))));
 
-      auto iter = (lastValid == path.end()) ? path.begin() : ++lastValid;  // handle case "no valid name in path found"
+      auto iter = (lastValid == end(path)) ? begin(path) : ++lastValid;  // handle case "no valid name in path found"
 
-      assert(iter != path.end());
+      assert(iter != end(path));
 
       // create missing part of path + our new entry, insert default values in new entries, idPath contains existing parent path
-      CreateEntry(idPath, iter, path.end(), type, bindValue);
+      CreateEntry(idPath, iter, end(path), type, bindValue);
 
       // update revision in parent path entries
-      UpdateRevision(idPath.begin(), idPath.end());
+      UpdateRevision(begin(idPath), end(idPath));
     }
     else
     {
@@ -871,7 +875,7 @@ namespace Configuration
     WriteableTransaction transaction(*this);
 
     IdList idPath;
-    auto lastValid = path.end();
+    auto lastValid = end(path);
 
     assert(!path.empty());
 
@@ -879,17 +883,17 @@ namespace Configuration
     // GetEntryId() will stop at the last valid/found entry in the path
     if (!GetEntryId(idPath, lastValid, path))
     {
-      assert((idPath.empty()) && (lastValid == path.end()) || ((!idPath.empty()) && (lastValid != path.end())));
+      assert((idPath.empty()) && (lastValid == end(path)) || ((!idPath.empty()) && (lastValid != end(path))));
 
-      auto iter = (lastValid == path.end()) ? path.begin() : ++lastValid;  // handle case "no valid name in path found"
+      auto iter = (lastValid == end(path)) ? begin(path) : ++lastValid;  // handle case "no valid name in path found"
 
-      assert(iter != path.end());
+      assert(iter != end(path));
 
       // create missing part of path + our new entry, insert default values in new entries, idPath contains existing parent path
-      CreateEntry(idPath, iter, path.end(), type, bindValue);
+      CreateEntry(idPath, iter, end(path), type, bindValue);
 
       // update revision in parent path entries
-      UpdateRevision(idPath.begin(), idPath.end());
+      UpdateRevision(begin(idPath), end(idPath));
     }
     else
     {
@@ -1151,7 +1155,7 @@ namespace Configuration
     if (TryDeleteEntryImpl(idPath.back(), recursive))
     {
       // update revision of parent entries
-      UpdateRevision(idPath.begin(), idPath.begin() + (idPath.size() - 1));
+      UpdateRevision(begin(idPath), begin(idPath) + (idPath.size() - 1));
 
       return true;
     }
@@ -1359,7 +1363,7 @@ namespace Configuration
   Store::CachedStatement Store::GetStatement(const std::string& statementText) const
   {
     StatementCache::const_iterator iter = m_StatementCache.find(statementText);
-    if (iter == m_StatementCache.end())
+    if (iter == end(m_StatementCache))
     {
       CachedStatement stm = make_shared<CachedStatement::element_type>(m_Database, statementText);
 
@@ -1408,7 +1412,7 @@ namespace Configuration
     }
     catch (...)
     {
-      // TODO: trace/log error
+      // TODO: trace/log error or maybe even terminate()
     }
   }
 

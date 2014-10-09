@@ -165,7 +165,7 @@ namespace
   using UniqueStorePtrDeleter = function<void(Store* ptr)>;
   using UniqueStorePtr        = unique_ptr<Store, UniqueStorePtrDeleter>;
 
-  UniqueStorePtr CreateEmptyStore(const wstring& fileName = DefaultDatabaseFileName)
+  UniqueStorePtr CreateEmptyStore(const wstring& fileName = DefaultDatabaseFileName, Store::String::value_type delimiter = Store::DefaultNameDelimiter)
   {
     // make sure we really create a empty database by deleting the file if it exists
     boost::filesystem::remove(fileName);
@@ -173,12 +173,25 @@ namespace
     // instantiate function as local variable to avoid memory leak in case ctor throws!
     UniqueStorePtrDeleter func = [](Store* ptr) { ptr->CheckDataConsistency(); delete ptr; };
 
-    return UniqueStorePtr(new Store(fileName, true), move(func));
+    return UniqueStorePtr(new Store(fileName, true, delimiter), move(func));
   }
 
 
   // generators
-  const wstring RandomNameCharacterSet = L"!\"#$%&'()*+,-/0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~öäüÖÄÜß€";
+  namespace Detail
+  {
+    const Store::String RandomNameCharacterSetTemplate = L".!\"#$%&'()*+,-/0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~öäüÖÄÜß€";
+  }
+
+  Store::String GetRandomNameCharacterSet(Store::String::value_type delimiter)
+  {
+    Store::String randomNameCharacterSet = Detail::RandomNameCharacterSetTemplate;
+
+    // <arg> please note that "erase(randomNameCharacterSet.find(delimiter));" is sadly a really bad idea here, almost looks linke an anomaly in the C++ standard library ...
+    randomNameCharacterSet.erase(std::find(begin(randomNameCharacterSet), end(randomNameCharacterSet), delimiter));
+
+    return randomNameCharacterSet;
+  }
 
   size_t GetRandomNumber(size_t min, size_t max)
   {
@@ -189,53 +202,120 @@ namespace
     return boost::random::uniform_int_distribution<>(min, max)(gen);
   }
 
-  Store::String GenerateRandomName(size_t maxLen = 16, size_t minLen = 1)
+  namespace Detail
+  {
+    const size_t DefaultMaxRandomNameLength = 16;
+    const size_t DefaultMinRandomNameLength = 1;
+  }
+
+  Store::String GenerateRandomName(size_t maxLen = Detail::DefaultMaxRandomNameLength, size_t minLen = Detail::DefaultMinRandomNameLength, Store::String::value_type delimiter = Store::DefaultNameDelimiter)
   {
     Store::String str;
+    Store::String randomNameCharacterSet = GetRandomNameCharacterSet(delimiter);
 
     str.resize(GetRandomNumber(minLen, maxLen));
 
     for (auto& chr : str)
     {
-      chr = RandomNameCharacterSet.at(GetRandomNumber(0, RandomNameCharacterSet.size() - 1));
+      chr = randomNameCharacterSet.at(GetRandomNumber(0, randomNameCharacterSet.size() - 1));
     }
-
+    
     assert(str.size() == wcslen(str.data()));
 
     return str;
   }
 
+  Store::String GenerateRandomName(Store::String::value_type delimiter)
+  {
+    return GenerateRandomName(Detail::DefaultMaxRandomNameLength, Detail::DefaultMinRandomNameLength, delimiter);
+  }
 
   // unit tests
 
   void TestIsValidName()
   { 
-    // TODO: test non-default path delimeter!
-    auto store = CreateEmptyStore();
+    // test with default path delimiter
+    {
+      auto store = CreateEmptyStore();
 
-    ReadOnlyTransaction transaction(*store);  // check there is no writeable transaction in implementation
+      ReadOnlyTransaction transaction(*store);  // check there is no writeable transaction in the implementation
 
-    // check for const correctness
-    static_cast<const Store&>(*store).IsValidName(L"");
+      // check for const correctness
+      static_cast<const Store&>(*store).IsValidName(L"");
 
-    UNITTEST_ASSERT(store->GetNameDelimeter() == Store::DefaultNameDelimeter);
-    UNITTEST_ASSERT(Store::DefaultNameDelimeter == L'.');
+      UNITTEST_ASSERT(store->GetNameDelimiter() == Store::DefaultNameDelimiter);
+      UNITTEST_ASSERT(Store::DefaultNameDelimiter == L'.');
 
-    UNITTEST_ASSERT(!store->IsValidName(L""));
-    UNITTEST_ASSERT(!store->IsValidName(L"."));
-    UNITTEST_ASSERT(!store->IsValidName(L".."));
-    UNITTEST_ASSERT(!store->IsValidName(L"..."));
-    UNITTEST_ASSERT(!store->IsValidName(L".name1.name2"));
-    UNITTEST_ASSERT(!store->IsValidName(L"name1.name2."));
-    UNITTEST_ASSERT(!store->IsValidName(L"..name1.name2"));
-    UNITTEST_ASSERT(!store->IsValidName(L"name1.name2.."));
-    UNITTEST_ASSERT(!store->IsValidName(L"name1..name2"));
-    UNITTEST_ASSERT(!store->IsValidName(L"name1...name2"));
+      UNITTEST_ASSERT(!store->IsValidName(L""));
 
-    UNITTEST_ASSERT(store->IsValidName(L"name"));
-    UNITTEST_ASSERT(store->IsValidName(L"name.name"));
-    UNITTEST_ASSERT(store->IsValidName(L"name.name.name"));
-    UNITTEST_ASSERT(store->IsValidName(RandomNameCharacterSet));
+      UNITTEST_ASSERT(!store->IsValidName(L"."));
+      UNITTEST_ASSERT(!store->IsValidName(L".."));
+      UNITTEST_ASSERT(!store->IsValidName(L"..."));
+      UNITTEST_ASSERT(!store->IsValidName(L".name1.name2"));
+      UNITTEST_ASSERT(!store->IsValidName(L"name1.name2."));
+      UNITTEST_ASSERT(!store->IsValidName(L"..name1.name2"));
+      UNITTEST_ASSERT(!store->IsValidName(L"name1.name2.."));
+      UNITTEST_ASSERT(!store->IsValidName(L"name1..name2"));
+      UNITTEST_ASSERT(!store->IsValidName(L"name1...name2"));
+      UNITTEST_ASSERT(!store->IsValidName(L".1.2"));
+      UNITTEST_ASSERT(!store->IsValidName(L"1.2."));
+      UNITTEST_ASSERT(!store->IsValidName(L"..1.2"));
+      UNITTEST_ASSERT(!store->IsValidName(L"1.2.."));
+      UNITTEST_ASSERT(!store->IsValidName(L"1..2"));
+      UNITTEST_ASSERT(!store->IsValidName(L"1...2"));
+
+      UNITTEST_ASSERT(store->IsValidName(L"name"));
+      UNITTEST_ASSERT(store->IsValidName(L"name.name"));
+      UNITTEST_ASSERT(store->IsValidName(L"name.name.name"));
+      UNITTEST_ASSERT(store->IsValidName(L"1"));
+      UNITTEST_ASSERT(store->IsValidName(L"2.2"));
+      UNITTEST_ASSERT(store->IsValidName(L"1.3.1"));
+
+      UNITTEST_ASSERT(store->IsValidName(GetRandomNameCharacterSet(store->GetNameDelimiter())));
+
+      for (size_t i = 0; i < 100; i++)
+      {
+        UNITTEST_ASSERT(store->IsValidName(GenerateRandomName()));
+        UNITTEST_ASSERT(store->IsValidName(GenerateRandomName() + store->GetNameDelimiter() +
+                                           GenerateRandomName()));
+        UNITTEST_ASSERT(store->IsValidName(GenerateRandomName() + store->GetNameDelimiter() + 
+                                           GenerateRandomName() + store->GetNameDelimiter() + 
+                                           GenerateRandomName()));
+      }
+    }
+
+    // test non-default path delimiter
+    {
+      // we try each character in our test character set as a delimiter!
+      static const Store::String TestDelimiter = Detail::RandomNameCharacterSetTemplate;
+
+      for (auto delimiter : TestDelimiter)
+      {      
+        auto store = CreateEmptyStore(DefaultDatabaseFileName, delimiter);
+
+        UNITTEST_ASSERT(store->GetNameDelimiter() == delimiter);
+
+        UNITTEST_ASSERT(!store->IsValidName(L""));
+
+        UNITTEST_ASSERT(!store->IsValidName({delimiter}));
+        UNITTEST_ASSERT(!store->IsValidName({delimiter, delimiter}));
+        UNITTEST_ASSERT(!store->IsValidName({delimiter, delimiter, delimiter}));
+
+        const Store::String delimStr(1, delimiter);
+
+        UNITTEST_ASSERT(store->IsValidName(GetRandomNameCharacterSet(store->GetNameDelimiter())));
+
+        for (size_t i = 0; i < 10; i++)
+        {
+          UNITTEST_ASSERT(store->IsValidName(GenerateRandomName(delimiter)));
+          UNITTEST_ASSERT(store->IsValidName(GenerateRandomName(delimiter) + store->GetNameDelimiter() +
+                                             GenerateRandomName(delimiter)));
+          UNITTEST_ASSERT(store->IsValidName(GenerateRandomName(delimiter) + store->GetNameDelimiter() +
+                                             GenerateRandomName(delimiter) + store->GetNameDelimiter() + 
+                                             GenerateRandomName(delimiter)));
+        }
+      }
+    }
   }
 
   void TestExists()
@@ -248,6 +328,7 @@ namespace
     // check for name validation
     UNITTEST_ASSERT_THROWS(store->Exists(L""), InvalidName);
     
+    UNITTEST_ASSERT(!store->Exists(L"Root"));
     UNITTEST_ASSERT(!store->Exists(L"name"));
     UNITTEST_ASSERT(!store->Exists(L"name.name"));
     UNITTEST_ASSERT(!store->Exists(L"name.name.name"));
@@ -288,7 +369,7 @@ namespace
     UNITTEST_ASSERT(store->Exists(L"name.name"));
     UNITTEST_ASSERT(store->Exists(L"name.name.name"));
 
-    // check for writeable transaction in implementation
+    // check there is no writeable transaction in the implementation
     {
       ReadOnlyTransaction transaction(*store);
 
@@ -360,7 +441,7 @@ namespace
     UNITTEST_ASSERT(!store->IsString(L"TypeTest"));
     UNITTEST_ASSERT(!store->IsBinary(L"TypeTest"));
 
-    // check for writeable transaction in implementation
+    // check there is no writeable transaction in the implementation
     {
       ReadOnlyTransaction transaction(*store);
 
@@ -443,7 +524,7 @@ namespace
 
     store->Delete(L"value2");
 
-    // check for writeable transaction in implementation
+    // check there is no writeable transaction in the implementation
     {
       ReadOnlyTransaction transaction(*store);
 
@@ -473,6 +554,7 @@ namespace
 
     using TrackedRevison = pair<Store::Revision, Store::Revision>;  // .first == old value, .second == new/currrent value; (.first == .second) => not changed
     auto reset = [](TrackedRevison& rev) { rev.first = rev.second; };
+    auto changed = [](const TrackedRevison& rev) -> bool { return rev.first != rev.second; };
 
     // check for name validation (empty == root)
     UNITTEST_ASSERT_THROWS(store->GetRevision(L".."), InvalidName);
@@ -486,14 +568,15 @@ namespace
     store->Exists(L"name");
     // check for L"" == root
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision(L""));
-    UNITTEST_ASSERT(rootRev.first == rootRev.second);
+    UNITTEST_ASSERT(!changed(rootRev));
     UNITTEST_ASSERT_THROWS(rootRev.second = store->GetRevision(L"Name1"), EntryNotFound);
 
     store->Create(L"Name1", -1);
 
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
-    UNITTEST_ASSERT(rootRev.first != rootRev.second);
+    UNITTEST_ASSERT(changed(rootRev));
     reset(rootRev);
+    UNITTEST_ASSERT(store->GetRevision() == store->GetRevision(L""));
 
     TrackedRevison name1Rev;
 
@@ -511,46 +594,46 @@ namespace
     store->IsBinary(L"Name1");
 
     UNITTEST_ASSERT_NO_EXCEPTION(name1Rev.second = store->GetRevision(L"Name1"));
-    UNITTEST_ASSERT(name1Rev.first == name1Rev.second);
+    UNITTEST_ASSERT(!changed(name1Rev));
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
-    UNITTEST_ASSERT(rootRev.first == rootRev.second);
+    UNITTEST_ASSERT(!changed(rootRev));
 
     store->Set(L"Name1", 1000);
 
     UNITTEST_ASSERT_NO_EXCEPTION(name1Rev.second = store->GetRevision(L"Name1"));
-    UNITTEST_ASSERT(name1Rev.first != name1Rev.second);
+    UNITTEST_ASSERT(changed(name1Rev));
     reset(name1Rev);
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
-    UNITTEST_ASSERT(rootRev.first != rootRev.second);
+    UNITTEST_ASSERT(changed(rootRev));
     reset(rootRev);
 
     store->Set(L"Name1", L"empty");
 
     UNITTEST_ASSERT_NO_EXCEPTION(name1Rev.second = store->GetRevision(L"Name1"));
-    UNITTEST_ASSERT(name1Rev.first != name1Rev.second);
+    UNITTEST_ASSERT(changed(name1Rev));
     reset(name1Rev);
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
-    UNITTEST_ASSERT(rootRev.first != rootRev.second);
+    UNITTEST_ASSERT(changed(rootRev));
     reset(rootRev);
 
     store->SetOrCreate(L"Name1", Store::Binary(4, 0x10));
 
     UNITTEST_ASSERT_NO_EXCEPTION(name1Rev.second = store->GetRevision(L"Name1"));
-    UNITTEST_ASSERT(name1Rev.first != name1Rev.second);
+    UNITTEST_ASSERT(changed(name1Rev));
     reset(name1Rev);
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
-    UNITTEST_ASSERT(rootRev.first != rootRev.second);
+    UNITTEST_ASSERT(changed(rootRev));
     reset(rootRev);
     UNITTEST_ASSERT_THROWS(rootRev.second = store->GetRevision(L"Name1.Name2"), EntryNotFound);
 
     store->Create(L"Name1.Name2", 0);
 
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
-    UNITTEST_ASSERT(rootRev.first != rootRev.second);
+    UNITTEST_ASSERT(changed(rootRev));
     reset(rootRev);
 
     UNITTEST_ASSERT_NO_EXCEPTION(name1Rev.second = store->GetRevision(L"Name1"));
-    UNITTEST_ASSERT(name1Rev.first != name1Rev.second);
+    UNITTEST_ASSERT(changed(name1Rev));
     reset(name1Rev);
 
     TrackedRevison name2Rev;
@@ -579,57 +662,57 @@ namespace
     store->IsBinary(L"Name1.Name2");
 
     UNITTEST_ASSERT_NO_EXCEPTION(name2Rev.second = store->GetRevision(L"Name1.Name2"));
-    UNITTEST_ASSERT(name2Rev.first == name2Rev.second);
+    UNITTEST_ASSERT(!changed(name2Rev));
     UNITTEST_ASSERT_NO_EXCEPTION(name1Rev.second = store->GetRevision(L"Name1"));
-    UNITTEST_ASSERT(name1Rev.first == name1Rev.second);
+    UNITTEST_ASSERT(!changed(name1Rev));
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
-    UNITTEST_ASSERT(rootRev.first == rootRev.second);
+    UNITTEST_ASSERT(!changed(rootRev));
 
     store->SetOrCreate(L"Name1.Name2", 1000);
 
     UNITTEST_ASSERT_NO_EXCEPTION(name2Rev.second = store->GetRevision(L"Name1.Name2"));
-    UNITTEST_ASSERT(name2Rev.first != name2Rev.second);
+    UNITTEST_ASSERT(changed(name2Rev));
     reset(name2Rev);
     UNITTEST_ASSERT_NO_EXCEPTION(name1Rev.second = store->GetRevision(L"Name1"));
-    UNITTEST_ASSERT(name1Rev.first != name1Rev.second);
+    UNITTEST_ASSERT(changed(name1Rev));
     reset(name1Rev);
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
-    UNITTEST_ASSERT(rootRev.first != rootRev.second);
+    UNITTEST_ASSERT(changed(rootRev));
     reset(rootRev);
 
     store->Set(L"Name1.Name2", L"empty");
 
     UNITTEST_ASSERT_NO_EXCEPTION(name2Rev.second = store->GetRevision(L"Name1.Name2"));
-    UNITTEST_ASSERT(name2Rev.first != name2Rev.second);
+    UNITTEST_ASSERT(changed(name2Rev));
     reset(name2Rev);
     UNITTEST_ASSERT_NO_EXCEPTION(name1Rev.second = store->GetRevision(L"Name1"));
-    UNITTEST_ASSERT(name1Rev.first != name1Rev.second);
+    UNITTEST_ASSERT(changed(name1Rev));
     reset(name1Rev);
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
-    UNITTEST_ASSERT(rootRev.first != rootRev.second);
+    UNITTEST_ASSERT(changed(rootRev));
     reset(rootRev);
 
     store->Set(L"Name1.Name2", Store::Binary(4, 0x10));
 
     UNITTEST_ASSERT_NO_EXCEPTION(name2Rev.second = store->GetRevision(L"Name1.Name2"));
-    UNITTEST_ASSERT(name2Rev.first != name2Rev.second);
+    UNITTEST_ASSERT(changed(name2Rev));
     reset(name2Rev);
     UNITTEST_ASSERT_NO_EXCEPTION(name1Rev.second = store->GetRevision(L"Name1"));
-    UNITTEST_ASSERT(name1Rev.first != name1Rev.second);
+    UNITTEST_ASSERT(changed(name1Rev));
     reset(name1Rev);
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
-    UNITTEST_ASSERT(rootRev.first != rootRev.second);
+    UNITTEST_ASSERT(changed(rootRev));
     reset(rootRev);
     UNITTEST_ASSERT_THROWS(rootRev.second = store->GetRevision(L"Name3"), EntryNotFound);
 
     store->SetOrCreate(L"Name3", 4711);
 
     UNITTEST_ASSERT_NO_EXCEPTION(name2Rev.second = store->GetRevision(L"Name1.Name2"));
-    UNITTEST_ASSERT(name2Rev.first == name2Rev.second);
+    UNITTEST_ASSERT(!changed(name2Rev));
     UNITTEST_ASSERT_NO_EXCEPTION(name1Rev.second = store->GetRevision(L"Name1"));
-    UNITTEST_ASSERT(name1Rev.first == name1Rev.second);
+    UNITTEST_ASSERT(!changed(name1Rev));
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
-    UNITTEST_ASSERT(rootRev.first != rootRev.second);
+    UNITTEST_ASSERT(changed(rootRev));
     reset(rootRev);
 
     TrackedRevison name3Rev;
@@ -667,16 +750,44 @@ namespace
     store->IsBinary(L"Name3");
 
     UNITTEST_ASSERT_NO_EXCEPTION(name3Rev.second = store->GetRevision(L"Name3"));
-    UNITTEST_ASSERT(name3Rev.first == name3Rev.second);
+    UNITTEST_ASSERT(!changed(name3Rev));
     UNITTEST_ASSERT_NO_EXCEPTION(name2Rev.second = store->GetRevision(L"Name1.Name2"));
-    UNITTEST_ASSERT(name2Rev.first == name2Rev.second);
+    UNITTEST_ASSERT(!changed(name2Rev));
     UNITTEST_ASSERT_NO_EXCEPTION(name1Rev.second = store->GetRevision(L"Name1"));
-    UNITTEST_ASSERT(name1Rev.first == name1Rev.second);
+    UNITTEST_ASSERT(!changed(name1Rev));
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
-    UNITTEST_ASSERT(rootRev.first == rootRev.second);
+    UNITTEST_ASSERT(!changed(rootRev));
+
+    // check there is no writeable transaction in the implementation
+    {
+      ReadOnlyTransaction transaction(*store);
+
+      UNITTEST_ASSERT_NO_EXCEPTION(store->GetRevision());
+      UNITTEST_ASSERT_NO_EXCEPTION(store->GetRevision(L"Name1"));
+      UNITTEST_ASSERT_THROWS(store->GetRevision(L"NameX"), EntryNotFound);
+      UNITTEST_ASSERT_THROWS(store->GetRevision(L"."), InvalidName);
+    }
 
     // TODO: delete + TryDelete
-    // TODO: check for writeable transaction
+
+    store->TryDelete(L"Name3", false);
+
+    UNITTEST_ASSERT_THROWS(name3Rev.second = store->GetRevision(L"Name3"), EntryNotFound);
+    UNITTEST_ASSERT_NO_EXCEPTION(name2Rev.second = store->GetRevision(L"Name1.Name2"));
+    UNITTEST_ASSERT(!changed(name2Rev));
+    UNITTEST_ASSERT_NO_EXCEPTION(name1Rev.second = store->GetRevision(L"Name1"));
+    UNITTEST_ASSERT(!changed(name1Rev));
+    UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
+    UNITTEST_ASSERT(changed(rootRev));
+    reset(rootRev);
+
+    store->Delete(L"Name1");
+
+    UNITTEST_ASSERT_THROWS(name3Rev.second = store->GetRevision(L"Name1.Name2"), EntryNotFound);
+    UNITTEST_ASSERT_THROWS(name3Rev.second = store->GetRevision(L"Name1"), EntryNotFound);
+    UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision());
+    UNITTEST_ASSERT(changed(rootRev));
+    reset(rootRev);
   }
 
   void TestCreate()
@@ -1037,9 +1148,10 @@ namespace Configuration
       REGISTER_UNIT_TEST(TestSet);
 
       REGISTER_UNIT_TEST(TestWriteableTransaction);
-      
+
+#ifdef NDEBUG  // running the benchmark in debug mode makes no sense
       REGISTER_UNIT_TEST(Benchmark);
-      
+#endif      
 
       for (const auto& test : tests)
       {

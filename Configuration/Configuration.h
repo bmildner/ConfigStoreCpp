@@ -64,26 +64,26 @@ namespace Configuration
         Integer m_Revision;
       };
 
-      static const String::value_type DefaultNameDelimeter;
+      static const String::value_type DefaultNameDelimiter;
 
       // opens existing configuration store
-      explicit Store(const std::wstring& fileName, bool create = false, wchar_t nameDelimeter = DefaultNameDelimeter);
+      explicit Store(const std::wstring& fileName, bool create = false, wchar_t nameDelimiter = DefaultNameDelimiter);
 
       ~Store() noexcept;
 
-      String::value_type GetNameDelimeter() const noexcept;
+      String::value_type GetNameDelimiter() const noexcept;
 
       // valid names must not:
-      // - start or end with a delimeter
-      // - conttain multiple consecutive delimeters
+      // - start or end with a delimiter
+      // - conttain multiple consecutive delimiters
       // - be empty
       // Note: no Unicode normalization is done before comparison of names or writeing them into the database!
       inline bool IsValidName(const String& name) const
       {
-        return IsValidName(name, m_Delimeter);
+        return IsValidName(name, m_Delimiter);
       }
       // only use if you really have to validate a name w/o an Store object in hand!
-      static bool IsValidName(const String& name, String::value_type delimeter);
+      static bool IsValidName(const String& name, String::value_type delimiter);
 
       bool Exists(const String& name) const;
 
@@ -176,7 +176,7 @@ namespace Configuration
       String GetSettingStr(const std::string& name) const;
       Binary GetSettingBin(const std::string& name) const;
 
-      void GetAndCheckConfiguration(wchar_t nameDelimeter);
+      void GetAndCheckConfiguration(wchar_t nameDelimiter);
       void CheckOrSetRootEntry();
 
 
@@ -247,7 +247,7 @@ namespace Configuration
       Integer m_DatabaseVersionMajor;
       Integer m_DatabaseVersionMinor;
 
-      String::value_type m_Delimeter;
+      String::value_type m_Delimiter;
 
       mutable std::weak_ptr<SQLite::Transaction> m_Transaction;
       mutable bool                               m_WriteableTransaction;
@@ -325,7 +325,7 @@ namespace Configuration
   struct UnknownDataType :      ConfigurationError {};
   struct DataTypeMissmatch :    ConfigurationError {};
   struct InvalidConfiguration : ConfigurationError {};
-  struct DelimeterMissmatch :   InvalidConfiguration {};
+  struct InvalidDelimiterSetting :   InvalidConfiguration {};
   struct VersionNotSupported :  ConfigurationError {};
 }
 
