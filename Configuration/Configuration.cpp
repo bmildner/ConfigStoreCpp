@@ -41,7 +41,9 @@ namespace
   const std::string Table_Entries_Parent_Index = "TableEntries_Parent";
   const std::string Table_Entries_Name_Parent_Index = "TableEntries_Name_Parent";
 
-  const std::string Table_Entries_RootEntry = "Root";
+  // turns out that the name our of root entry _must not_ be a valid name for our store!
+  // violating this causes constraint violations on the database!!
+  const std::string Table_Entries_RootEntryName = "";
 
   const std::string Setting_MajorVersion = "MajorVersion";
   const std::string Setting_MinorVersion = "MinorVersion";
@@ -161,6 +163,9 @@ namespace Configuration
     m_Database.exec("PRAGMA integrity_check");
     m_Database.exec("PRAGMA foreign_key_check");
 
+    // root entry name must not be a valid name!
+    assert(!IsValidName(UTF8ToWchar(Table_Entries_RootEntryName)));
+
     // get config and do minimal sanity-check on data in db
     GetAndCheckConfiguration(nameDelimiter);
     CheckOrSetRootEntry();
@@ -267,7 +272,7 @@ namespace Configuration
       auto newRoot = GetStatement(Statement3);
       
       newRoot->bind(1, static_cast<Integer>(DefaultEntryValueType));
-      newRoot->bind(2, Table_Entries_RootEntry);
+      newRoot->bind(2, Table_Entries_RootEntryName);
       newRoot->bind(3, DefaultEntryValue);
 
       if (newRoot->exec() != 1)
@@ -280,7 +285,7 @@ namespace Configuration
       if ((root->getColumn(0).getInt64() != 0) ||
           (root->getColumn(1).getInt64() != 0) ||
           (root->getColumn(2).getInt64() != static_cast<Integer>(DefaultEntryValueType)) ||
-          (root->getColumn(3).getText()  != Table_Entries_RootEntry) ||
+          (root->getColumn(3).getText()  != Table_Entries_RootEntryName) ||
           (root->getColumn(4).getInt64() != 0))
       {
         throw ExceptionImpl<InvalidRootEntry>(L"Root entry contains invalid data");
@@ -310,14 +315,14 @@ namespace Configuration
     {
       vector<Integer> badEntries;
 
-      // our root entry always has name "Root" even if this is not a valid name due to demimiter setting!
-      static const string Statement1 = "SELECT DISTINCT " + Table_Entries_Column_Name + " FROM " + Table_Entries + " WHERE " + Table_Entries_Column_Id + " != 0";
+      static const string Statement1 = "SELECT DISTINCT " + Table_Entries_Column_Name + " FROM " + Table_Entries;
       auto stm = GetStatement(Statement1);
 
       while (stm->executeStep())
       {      
         string name = stm->getColumn(0).getText();
 
+        // TODO: maybe use IsValidName() instead of (partly) reimplementing it here!?!
         if (UTF8ToWchar(name).find(m_Delimiter) != String::npos)
         {
           static const string Statement2 = "SELECT " + Table_Entries_Column_Id + " FROM " + Table_Entries +

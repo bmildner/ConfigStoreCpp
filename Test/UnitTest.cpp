@@ -331,9 +331,6 @@ namespace
     // check for name validation
     UNITTEST_ASSERT_THROWS(store->Exists(L""), InvalidName);
     
-    // make sure we do filter out our root entry!
-    UNITTEST_ASSERT(!store->Exists(L"Root"));
-
     UNITTEST_ASSERT(!store->Exists(L"name"));
     UNITTEST_ASSERT(!store->Exists(L"name.name"));
     UNITTEST_ASSERT(!store->Exists(L"name.name.name"));
