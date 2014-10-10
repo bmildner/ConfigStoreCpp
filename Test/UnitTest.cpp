@@ -232,6 +232,8 @@ namespace
 
   // unit tests
 
+  // TODO: add test for Store c'tor
+
   void TestIsValidName()
   { 
     // test with default path delimiter
@@ -286,6 +288,7 @@ namespace
 
     // test non-default path delimiter
     {
+      // TODO: this is horribly slow because we have to create a new database file for each delimeter ...
       // we try each character in our test character set as a delimiter!
       static const Store::String TestDelimiter = Detail::RandomNameCharacterSetTemplate;
 
@@ -305,7 +308,7 @@ namespace
 
         UNITTEST_ASSERT(store->IsValidName(GetRandomNameCharacterSet(store->GetNameDelimiter())));
 
-        for (size_t i = 0; i < 10; i++)
+        for (size_t i = 0; i < 100; i++)
         {
           UNITTEST_ASSERT(store->IsValidName(GenerateRandomName(delimiter)));
           UNITTEST_ASSERT(store->IsValidName(GenerateRandomName(delimiter) + store->GetNameDelimiter() +
@@ -328,7 +331,9 @@ namespace
     // check for name validation
     UNITTEST_ASSERT_THROWS(store->Exists(L""), InvalidName);
     
+    // make sure we do filter out our root entry!
     UNITTEST_ASSERT(!store->Exists(L"Root"));
+
     UNITTEST_ASSERT(!store->Exists(L"name"));
     UNITTEST_ASSERT(!store->Exists(L"name.name"));
     UNITTEST_ASSERT(!store->Exists(L"name.name.name"));
@@ -768,7 +773,7 @@ namespace
       UNITTEST_ASSERT_THROWS(store->GetRevision(L"."), InvalidName);
     }
 
-    // TODO: delete + TryDelete
+    // TODO: more tests with Delete and TryDelete needed?
 
     store->TryDelete(L"Name3", false);
 
