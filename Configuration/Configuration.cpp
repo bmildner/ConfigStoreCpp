@@ -8,6 +8,7 @@
 #include <set>
 #include <map>
 #include <tuple>
+#include <type_traits>
 
 #include "Utils.h"
 
@@ -18,7 +19,7 @@ CONFIGURATION_BOOST_INCL_GUARD_BEGIN
 #include <boost/random/uniform_int_distribution.hpp>
 CONFIGURATION_BOOST_INCL_GUARD_END
 
-// TODO: maybe we schould define SQLITECPP_ENABLE_ASSERT_HANDLER !?1
+// TODO: maybe we schould define SQLITECPP_ENABLE_ASSERT_HANDLER !?!
 
 using namespace std;
 
@@ -77,7 +78,7 @@ namespace
         return (boost::wformat(L"Unknown SQLite data type (%1%)") % type).str();
      }
   }
-}
+}  // anonymous namespace
 
 namespace Configuration
 {
@@ -642,8 +643,10 @@ namespace Configuration
   
   Store::Integer Store::GetEntryRevision(Integer id) const
   {
-    static_assert((sizeof(decltype(GetEntryRevision(0))) * 8) >= 64, "Revision returned by GetEntryRevision() must be at least 64 bits wide");
-    static_assert(std::is_same<decltype(GetEntryRevision(0)), Store::Integer>::value, "We currently require GetEntryRevision() to return an Store::Integer, implementation detail");
+    static_assert((sizeof(decltype(GetEntryRevision(0))) * 8) >= 64, 
+                  "Revision returned by GetEntryRevision() must be at least 64 bits wide");
+    static_assert(is_same<decltype(GetEntryRevision(0)), Store::Integer>::value,
+                  "We currently require GetEntryRevision() to return an Store::Integer, implementation detail");
 
     assert(m_Transaction.lock());
 
@@ -668,6 +671,10 @@ namespace Configuration
 
   Store::Revision Store::GetRevision(const String& name) const
   {
+    // strange syntax but actually Revision::m_Id is not a valid expression for runtime-code so the compiler can't defer its type and so also not its size
+    static_assert(((sizeof(Revision().m_Id) * 8) >= 64) && ((sizeof(Revision().m_Revision) * 8) >= 64),
+                  "Entry ids and revisions must be at least 64 bits wide");
+
     ReadOnlyTransaction transaction(*this);
 
     Integer id = !name.empty() ? GetEntryId(ParseName(name)).back() : 0;

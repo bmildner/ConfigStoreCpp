@@ -1203,7 +1203,7 @@ namespace
 
     cout << "\nTotal:\n";
   }
-}
+}  // anonymous namespace
 
 namespace Configuration
 {

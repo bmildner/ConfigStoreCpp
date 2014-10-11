@@ -11,7 +11,6 @@
 #include <cstdint>
 #include <vector>
 #include <exception>
-#include <type_traits>
 #include <functional>
 #include <map>
 
@@ -106,14 +105,11 @@ namespace Configuration
       bool IsInteger(const String& name) const;      
       bool IsBinary(const String& name) const;
 
-      // empty name == root
+      // empty name == root, revision of the whole store
       // there are corner-cases where a change may not be detected:
       //   if the revision of the entry was bumped exactly 2^(sizeof(<internal revision representation>) * 8) times in the meantime
       //   if the entry has been deleted and re-created in the meantime AND the new entry happens to have the same id AND the same revision by accident
       // -> next to impossible in finite time and space given that entry ids and revisions internally are at least 64 bit wide
-      // strange syntax but actually Revision::m_Id is not a valid expression for runtime-code so the compiler can't defer its type and so also not its size
-      static_assert(((sizeof(Revision().m_Id) * 8) >= 64) && ((sizeof(Revision().m_Revision) * 8) >= 64),
-                    "Store::Integer must be al least 64 bits wide");      
       Revision GetRevision(const String& name = L"") const;
 
       // empty name == root
@@ -146,7 +142,7 @@ namespace Configuration
       // throws EntryNotFound if name does not exist
       // throws HasChildEntry if recursive == false and name has children
       void Delete(const String& name, bool recursive = true);
-          
+
       // slow, depends on number of entries in DB! >= O(n)!
       void CheckDataConsistency() const;
 
