@@ -52,24 +52,24 @@ namespace Configuration
   {
     public:
       explicit ExceptionImpl(const std::wstring& what)
-        : Interface(),
+      : Interface(),
         m_What(what), m_NarrowWhat(WideToNarrowStr(m_What)),
         m_TypeName(NarrowToWideStr(typeid(Interface).name()))
       {
       }
 
-      virtual const std::wstring& What() const noexcept
+      const std::wstring& What() const noexcept override
       {
         return m_What;
       }
 
-        virtual const char* what() const noexcept
+      const char* what() const noexcept override
       {
         return m_NarrowWhat.c_str();
       }
 
 
-        virtual const std::wstring& TypeName() const noexcept
+      const std::wstring& TypeName() const noexcept override
       {
         return m_TypeName;
       }

@@ -642,7 +642,7 @@ namespace Configuration
   
   Store::Integer Store::GetEntryRevision(Integer id) const
   {
-    static_assert(sizeof(decltype(GetEntryRevision(0))) >= (64 / 8), "Revision returned by GetEntryRevision() must be at least 64 bits wide");
+    static_assert((sizeof(decltype(GetEntryRevision(0))) * 8) >= 64, "Revision returned by GetEntryRevision() must be at least 64 bits wide");
     static_assert(std::is_same<decltype(GetEntryRevision(0)), Store::Integer>::value, "We currently require GetEntryRevision() to return an Store::Integer, implementation detail");
 
     assert(m_Transaction.lock());
@@ -1237,6 +1237,8 @@ namespace Configuration
 
     transaction.Commit();
 
+    // should never throw an exception!
+    // static_assert(noexcept(m_Delimiter = delimiter), "This assignment must not throw an exception");
     m_Delimiter = delimiter;
   }
 

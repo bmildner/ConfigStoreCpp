@@ -19,6 +19,7 @@ CONFIGURATION_BOOST_INCL_GUARD_BEGIN
 #include <boost/random/uniform_int_distribution.hpp>
 CONFIGURATION_BOOST_INCL_GUARD_END
 
+#define CONFIGURATION_UNITTEST_ENABLE_PRIVATEACCESS
 #include "Configuration/Configuration.h"
 
 using namespace std;
@@ -31,7 +32,7 @@ namespace Configuration
   {
     namespace Detail
     {
-      // this is somewhat dirty trick to get access to private members in Store objects ...
+      // this is a somewhat dirty trick to get access to private members in Store objects ...
       struct PrivateAccess
       {
         static bool IsValidNewDelimiter(const Store& store, Store::String::value_type delimiter)
@@ -619,6 +620,7 @@ namespace
     store->HasChild(L"");
     store->GetChildren(L"");
     store->Exists(L"name");
+
     // check for L"" == root
     UNITTEST_ASSERT_NO_EXCEPTION(rootRev.second = store->GetRevision(L""));
     UNITTEST_ASSERT(!changed(rootRev));

@@ -31,8 +31,12 @@ namespace Configuration
   {
     namespace Detail
     {
-      // this is somewhat dirty trick to get access to private members in Store objects ...
+      // this is a somewhat dirty trick to get access to private members in Store objects ...
       struct PrivateAccess;
+
+#ifndef CONFIGURATION_UNITTEST_ENABLE_PRIVATEACCESS
+      struct PrivateAccess final {};  // prevent abuse of PrivateAccess forward declaration!
+#endif
     }
   }
 
@@ -104,10 +108,11 @@ namespace Configuration
 
       // empty name == root
       // there are corner-cases where a change may not be detected:
-      //   if the revision of the entry was bumped exactly 2^(sizeof(Interger) * 8) times in the meantime
+      //   if the revision of the entry was bumped exactly 2^(sizeof(<internal revision representation>) * 8) times in the meantime
       //   if the entry has been deleted and re-created in the meantime AND the new entry happens to have the same id AND the same revision by accident
-      // -> next to impossible in finite time and space given that revisions and entry ids are at least 64 bit wide
-      static_assert((sizeof(Revision().m_Id) >= (64 / 8)) && (sizeof(Revision().m_Revision) >= (64 / 8)),  // strange that the compiler did not allow "sizeof(Revision().m_Id)"!?
+      // -> next to impossible in finite time and space given that entry ids and revisions internally are at least 64 bit wide
+      // strange syntax but actually Revision::m_Id is not a valid expression for runtime-code so the compiler can't defer its type and so also not its size
+      static_assert(((sizeof(Revision().m_Id) * 8) >= 64) && ((sizeof(Revision().m_Revision) * 8) >= 64),
                     "Store::Integer must be al least 64 bits wide");      
       Revision GetRevision(const String& name = L"") const;
 
@@ -165,7 +170,7 @@ namespace Configuration
       friend class ReadOnlyTransaction;
       friend class WriteableTransaction;
       
-      // this is somewhat dirty trick to get access to private members in Store objects ...
+      // this is a somewhat dirty trick to get access to private members in Store objects ...
       friend struct Configuration::UnitTest::Detail::PrivateAccess;
 
       // returns true if delimiter is not found in any name currentl present in the store
@@ -201,7 +206,7 @@ namespace Configuration
 
 
       using IdList = std::vector<Integer>;
-      static_assert(sizeof(IdList::value_type) >= (64 / 8), "Entry ids must be at least 64 bits wide");
+      static_assert((sizeof(IdList::value_type) * 8) >= 64, "Entry ids must be at least 64 bits wide");
       static_assert(std::is_same<IdList::value_type, Store::Integer>::value, "We currently require Entry ids to be Store::Integer, implementation detail");
 
 
