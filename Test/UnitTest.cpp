@@ -24,6 +24,30 @@ CONFIGURATION_BOOST_INCL_GUARD_END
 using namespace std;
 using namespace Configuration;
 
+
+namespace Configuration
+{
+  namespace UnitTest
+  {
+    namespace Detail
+    {
+      // this is somewhat dirty trick to get access to private members in Store objects ...
+      struct PrivateAccess
+      {
+        static bool IsValidNewDelimiter(const Store& store, Store::String::value_type delimiter)
+        {
+          return store.IsValidNewDelimiter(delimiter);
+        }
+
+        static void SetNewDelimiter(Store& store, Store::String::value_type delimiter)
+        {
+          store.SetNewDelimiter(delimiter);
+        }
+      };
+    }
+  }
+}
+
 namespace
 {    
   const wstring DefaultDatabaseFileName = L"unittest.db";
@@ -306,13 +330,20 @@ namespace
 
     // test non-default path delimiter
     {
-      // TODO: this is horribly slow because we have to create a new database file for each delimeter ...
       // we try each character in our test character set as a delimiter!
       static const Store::String TestDelimiter = Detail::RandomNameCharacterSetTemplate;
 
+      // create store with default delimeter and switch it as we go!      
+      auto store = CreateEmptyStore(DefaultDatabaseFileName);
+
+      // this should save a tremendous amount of IO for this test!
+      WriteableTransaction transaction(*store);
+
       for (auto delimiter : TestDelimiter)
-      {      
-        auto store = CreateEmptyStore(DefaultDatabaseFileName, delimiter);
+      {
+		// set new delimeter through private access helper
+        UNITTEST_ASSERT(Configuration::UnitTest::Detail::PrivateAccess::IsValidNewDelimiter(*store, delimiter));
+        UNITTEST_ASSERT_NO_EXCEPTION(Configuration::UnitTest::Detail::PrivateAccess::SetNewDelimiter(*store, delimiter));
 
         UNITTEST_ASSERT(store->GetNameDelimiter() == delimiter);
 
@@ -336,6 +367,8 @@ namespace
                                              GenerateRandomName(delimiter)));
         }
       }
+
+      transaction.Commit();
     }
   }
 

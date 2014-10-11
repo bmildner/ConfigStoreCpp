@@ -27,6 +27,16 @@ namespace Configuration
     class RandomNumberGenerator;
   }
 
+  namespace UnitTest
+  {
+    namespace Detail
+    {
+      // this is somewhat dirty trick to get access to private members in Store objects ...
+      struct PrivateAccess;
+    }
+  }
+
+
   class ReadOnlyTransaction;
   class WriteableTransaction;
 
@@ -93,10 +103,12 @@ namespace Configuration
       bool IsBinary(const String& name) const;
 
       // empty name == root
-      // there are corner-cases where a change to the entry may not be detected:
+      // there are corner-cases where a change may not be detected:
       //   if the revision of the entry was bumped exactly 2^(sizeof(Interger) * 8) times in the meantime
       //   if the entry has been deleted and re-created in the meantime AND the new entry happens to have the same id AND the same revision by accident
-      // -> next to impossible
+      // -> next to impossible in finite time and space given that revisions and entry ids are at least 64 bit wide
+      static_assert((sizeof(Revision().m_Id) >= (64 / 8)) && (sizeof(Revision().m_Revision) >= (64 / 8)),  // strange that the compiler did not allow "sizeof(Revision().m_Id)"!?
+                    "Store::Integer must be al least 64 bits wide");      
       Revision GetRevision(const String& name = L"") const;
 
       // empty name == root
@@ -129,7 +141,6 @@ namespace Configuration
       // throws EntryNotFound if name does not exist
       // throws HasChildEntry if recursive == false and name has children
       void Delete(const String& name, bool recursive = true);
-
           
       // slow, depends on number of entries in DB! >= O(n)!
       void CheckDataConsistency() const;
@@ -153,6 +164,15 @@ namespace Configuration
 
       friend class ReadOnlyTransaction;
       friend class WriteableTransaction;
+      
+      // this is somewhat dirty trick to get access to private members in Store objects ...
+      friend struct Configuration::UnitTest::Detail::PrivateAccess;
+
+      // returns true if delimiter is not found in any name currentl present in the store
+      // returning true implies that SetNewDelimiter() with the given delimiter will be successful
+      bool IsValidNewDelimiter(String::value_type delimiter) const;
+      // throws exception if delimiter can not be set
+      void SetNewDelimiter(String::value_type delimiter);
 
 
       std::shared_ptr<SQLite::Transaction> GetTransaction(bool exclusive) const;
@@ -181,6 +201,9 @@ namespace Configuration
 
 
       using IdList = std::vector<Integer>;
+      static_assert(sizeof(IdList::value_type) >= (64 / 8), "Entry ids must be at least 64 bits wide");
+      static_assert(std::is_same<IdList::value_type, Store::Integer>::value, "We currently require Entry ids to be Store::Integer, implementation detail");
+
 
       Path Store::ParseName(const Store::String& name) const;
 
@@ -310,6 +333,7 @@ namespace Configuration
   struct InvalidQuery :       DatabaseError {};
   struct InvalidInsert :      DatabaseError {};
   struct InvalidTransaction : DatabaseError {};
+  struct InvalidDelimiter :   DatabaseError {};
 
   struct InconsistenData :       DatabaseError {};
   struct RootEntryMissing :      InconsistenData {};

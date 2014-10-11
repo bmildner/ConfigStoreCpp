@@ -558,8 +558,7 @@ namespace Configuration
 
     static const string Statement = "SELECT " + Table_Entries_Column_Id + " FROM " + Table_Entries +
                                       " WHERE " + Table_Entries_Column_Name + " = ?1 AND " +
-                                                  Table_Entries_Column_Parent + " = ?2 AND " +
-                                                  Table_Entries_Column_Id + " != 0";
+                                                  Table_Entries_Column_Parent + " = ?2";
     auto stm = GetStatement(Statement);
 
     stm->bind(1, WcharToUTF8(name));
@@ -640,9 +639,12 @@ namespace Configuration
 
     return Exists(ParseName(name));
   }
-
+  
   Store::Integer Store::GetEntryRevision(Integer id) const
   {
+    static_assert(sizeof(decltype(GetEntryRevision(0))) >= (64 / 8), "Revision returned by GetEntryRevision() must be at least 64 bits wide");
+    static_assert(std::is_same<decltype(GetEntryRevision(0)), Store::Integer>::value, "We currently require GetEntryRevision() to return an Store::Integer, implementation detail");
+
     assert(m_Transaction.lock());
 
     // duplicate statement in UpdateRevision(), reason is performance !
@@ -1201,6 +1203,42 @@ namespace Configuration
     transaction.Commit();
   }
 
+  bool Store::IsValidNewDelimiter(String::value_type delimiter) const
+  {
+    ReadOnlyTransaction transaction(*this);
+
+    static const string Statement = "SELECT COUNT(" + Table_Entries_Column_Id + ") FROM " + Table_Entries + " WHERE " + Table_Entries_Column_Name + " LIKE '%' + ?1 + '%'";
+    auto stm = GetStatement(Statement);
+
+    stm->bind(1, WcharToUTF8({delimiter}));
+
+    if (!stm->executeStep())
+    {
+      throw ExceptionImpl<InvalidQuery>((boost::wformat(L"Faild to query number of entries with name containing (%1%)") % delimiter).str());
+    }
+
+    Integer count = stm->getColumn(0).getInt64();
+
+    assert(!stm->executeStep());
+
+    return count == 0;
+  }
+
+  void Store::SetNewDelimiter(String::value_type delimiter)
+  {
+    WriteableTransaction transaction(*this);
+
+    if (!IsValidNewDelimiter(delimiter))
+    {
+      throw ExceptionImpl<InvalidDelimiter>((boost::wformat(L"(%1%) is not a valid new delimeter") % delimiter).str());
+    }
+
+    SetSetting(Setting_NameDelimiter, String({delimiter}));
+
+    transaction.Commit();
+
+    m_Delimiter = delimiter;
+  }
 
   std::shared_ptr<SQLite::Transaction> Store::GetTransaction(bool writeable) const
   {
