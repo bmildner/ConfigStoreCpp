@@ -193,13 +193,15 @@ namespace
     return randomNameCharacterSet;
   }
 
-  size_t GetRandomNumber(size_t min, size_t max)
+  size_t GetRandomNumber(size_t min = numeric_limits<size_t>::min(), size_t max = numeric_limits<size_t>::max())
   {
-    static boost::random::mt19937 gen(static_cast<uint32_t>(time(0)));
+    // TODO: maybe add infrastucture to select between fixed and random seed for random test data
+    // using a fixed seed inorder to have reproduceable results, at least for the time beeing ...
+    static boost::random::mt19937 gen(4711);
 
     assert(min < max);
 
-    return boost::random::uniform_int_distribution<>(min, max)(gen);
+    return boost::random::uniform_int_distribution<size_t>(min, max)(gen);
   }
 
   namespace Detail
@@ -220,6 +222,22 @@ namespace
       chr = randomNameCharacterSet.at(GetRandomNumber(0, randomNameCharacterSet.size() - 1));
     }
     
+    assert(str.size() == wcslen(str.data()));
+
+    return str;
+  }
+
+  Store::String GenerateRandomString(size_t maxLen, size_t minLen)
+  {
+    Store::String str;
+
+    str.resize(GetRandomNumber(minLen, maxLen));
+
+    for (auto& chr : str)
+    {
+      chr = Detail::RandomNameCharacterSetTemplate.at(GetRandomNumber(0, Detail::RandomNameCharacterSetTemplate.size() - 1));
+    }
+
     assert(str.size() == wcslen(str.data()));
 
     return str;
@@ -1102,11 +1120,18 @@ namespace
   {
     static const size_t count = 10000;
 
-    set<Store::String> names;
+    set<Store::String>     names;
+    vector<Store::String>  stringValues;
+    vector<Store::Integer> intValues;
 
-    for (size_t i = 0; i <= count; i++)
+    stringValues.reserve(count);
+    intValues.resize(count);
+
+    for (size_t i = 0; i < count; i++)
     {
-      while (!names.insert(GenerateRandomName()).second);
+      while (!names.insert(GenerateRandomName()).second);  // names have to be unique
+      stringValues.push_back(GenerateRandomString(35, 5));
+      intValues[i] = GetRandomNumber();
     }
 
     cout << "Creating " << count << " entries:\n";
@@ -1114,12 +1139,28 @@ namespace
     auto store = CreateEmptyStore();
     WriteableTransaction transaction(*store);
 
-    {
+    {      
       boost::timer::auto_cpu_timer timer;
+
+      assert(names.size() == count);
+      assert(names.size() == stringValues.size());
+      assert(intValues.size() == stringValues.size());
+
+      // TODO: is there a better way to iterate over multiple containers at once?
+      size_t index = 0;
 
       for (const auto& name : names)
       {
-        store->Create(name, 0);
+        if (GetRandomNumber(0, 1) == 0)
+        {
+          store->Create(name, intValues[index]);
+        }
+        else
+        {
+          store->Create(name, stringValues[index]);
+        }
+
+        index++;
       }
 
       transaction.Commit();
