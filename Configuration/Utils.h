@@ -31,7 +31,7 @@
 #  include <codeanalysis\warnings.h>
 
 #  define CONFIGURATION_BOOST_INCL_GUARD_BEGIN  __pragma(warning(push))                                 \
-                                                __pragma(warning(disable: ALL_CODE_ANALYSIS_WARNINGS))  \
+                                                __pragma(warning(disable: ALL_CODE_ANALYSIS_WARNINGS))
 
 #  define CONFIGURATION_BOOST_INCL_GUARD_END    __pragma(warning(pop))
 
@@ -58,18 +58,18 @@ namespace Configuration
       {
       }
 
-      const std::wstring& What() const noexcept override
+      virtual const std::wstring& What() const noexcept override
       {
         return m_What;
       }
 
-      const char* what() const noexcept override
+      virtual const char* what() const noexcept override
       {
         return m_NarrowWhat.c_str();
       }
 
 
-      const std::wstring& TypeName() const noexcept override
+      virtual const std::wstring& TypeName() const noexcept override
       {
         return m_TypeName;
       }

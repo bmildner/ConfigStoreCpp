@@ -9,6 +9,7 @@
 #include <map>
 #include <tuple>
 #include <type_traits>
+#include <exception>
 
 #include "Utils.h"
 
@@ -19,27 +20,27 @@ CONFIGURATION_BOOST_INCL_GUARD_BEGIN
 #include <boost/random/uniform_int_distribution.hpp>
 CONFIGURATION_BOOST_INCL_GUARD_END
 
-// TODO: maybe we schould define SQLITECPP_ENABLE_ASSERT_HANDLER !?!
 
 using namespace std;
+
 
 namespace 
 {
   const string Table_Settings = "Settings";
   const string Table_Entries = "Entries";
 
-  const std::string Table_Settings_Column_Name = "Name";
+  const std::string Table_Settings_Column_Name  = "Name";
   const std::string Table_Settings_Column_Value = "Value";
 
-  const std::string Table_Entries_Column_Id = "Id";
-  const std::string Table_Entries_Column_Parent = "Parent";
-  const std::string Table_Entries_Column_Name = "Name";
+  const std::string Table_Entries_Column_Id       = "Id";
+  const std::string Table_Entries_Column_Parent   = "Parent";
+  const std::string Table_Entries_Column_Name     = "Name";
   const std::string Table_Entries_Column_Revision = "Revision";
-  const std::string Table_Entries_Column_Type = "Type";
-  const std::string Table_Entries_Column_Value = "Value";
+  const std::string Table_Entries_Column_Type     = "Type";
+  const std::string Table_Entries_Column_Value    = "Value";
 
-  const std::string Table_Entries_Name_Index = "TableEntries_Name";
-  const std::string Table_Entries_Parent_Index = "TableEntries_Parent";
+  const std::string Table_Entries_Name_Index        = "TableEntries_Name";
+  const std::string Table_Entries_Parent_Index      = "TableEntries_Parent";
   const std::string Table_Entries_Name_Parent_Index = "TableEntries_Name_Parent";
 
   // turns out that the name our of root entry _must not_ be a valid name for our store!
@@ -48,7 +49,9 @@ namespace
 
   const std::string Setting_MajorVersion = "MajorVersion";
   const std::string Setting_MinorVersion = "MinorVersion";
+
   const std::string Setting_NameDelimiter = "NameDelimiter";
+
 
   wstring SQLiteDataTypeToStr(int type)
   {
@@ -79,6 +82,18 @@ namespace
      }
   }
 }  // anonymous namespace
+
+
+namespace SQLite
+{
+  // SQLiteCpp assertion handler that is called in case a destructor throws an exception
+  void assertion_failed(const char*, const long, const char*,
+                        const char*, const char*)
+  {
+    // terminate as there is no save and sane way to recover from a throwing destructor!
+    std::terminate();
+  }
+}
 
 namespace Configuration
 {
@@ -1439,7 +1454,7 @@ namespace Configuration
   {
   }
 
-  ReadOnlyTransaction::~ReadOnlyTransaction()
+  ReadOnlyTransaction::~ReadOnlyTransaction() noexcept
   {
   }
 
@@ -1453,18 +1468,17 @@ namespace Configuration
     }
   }
 
-  WriteableTransaction::~WriteableTransaction()
+  WriteableTransaction::~WriteableTransaction() noexcept
   {
-    try
+    // we accept the fact that the rollback ultimately might throw an exception
+    // as there is no way we can recover from an failed rollback 
+    //   -> we also accept that in case of an exception we will end up calling std::terminate()!
+    // Rational: if we know we can't recover from an error in a save and sane way there is only one safe option we have left 
+    //           => terminate execution immediately to save the day!
+
+    if (!m_Commited && !m_SavepointName.empty())
     {
-      if (!m_Commited && !m_SavepointName.empty())
-      {
-        m_Transaction->RollbackSavepoint(m_SavepointName);
-      }
-    }
-    catch (...)
-    {
-      // TODO: trace/log error or maybe even terminate()
+      m_Transaction->RollbackSavepoint(m_SavepointName);
     }
   }
 

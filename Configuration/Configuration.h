@@ -34,7 +34,7 @@ namespace Configuration
       struct PrivateAccess;
 
 #ifndef CONFIGURATION_UNITTEST_ENABLE_PRIVATEACCESS
-      struct PrivateAccess final {};  // prevent abuse of PrivateAccess forward declaration!
+      struct PrivateAccess final {};  // prevent easy abuse of PrivateAccess forward declaration!
 #endif
     }
   }
@@ -346,12 +346,13 @@ namespace Configuration
   struct InvalidEntryLinking :   InconsistenData {};
   struct UnknownEntryType :      InconsistenData {};
 
-  struct ConfigurationError :   DatabaseError {};
-  struct UnknownDataType :      ConfigurationError {};
-  struct DataTypeMissmatch :    ConfigurationError {};
-  struct InvalidConfiguration : ConfigurationError {};
-  struct InvalidDelimiterSetting :   InvalidConfiguration {};
-  struct VersionNotSupported :  ConfigurationError {};
+  struct ConfigurationError :      DatabaseError {};
+  struct UnknownDataType :         ConfigurationError {};
+  struct DataTypeMissmatch :       ConfigurationError {};
+  struct VersionNotSupported :     ConfigurationError {};
+  struct InvalidConfiguration :    ConfigurationError {};
+  struct InvalidDelimiterSetting : InvalidConfiguration {};
+
 }
 
 
