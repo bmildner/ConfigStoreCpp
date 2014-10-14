@@ -32,10 +32,6 @@ namespace Configuration
     {
       // this is a somewhat dirty trick to get access to private members in Store objects ...
       struct PrivateAccess;
-
-#ifndef CONFIGURATION_UNITTEST_ENABLE_PRIVATEACCESS
-      struct PrivateAccess final {};  // prevent easy abuse of PrivateAccess forward declaration!
-#endif
     }
   }
 
