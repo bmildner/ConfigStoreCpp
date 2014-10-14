@@ -16,8 +16,16 @@
 
 #include <boost\noncopyable.hpp>
 
-// TODO: remove include and use forward declarations (in Details namespace if possible!)!
-#include "SQLiteCpp\SQLiteCpp.h"
+#include "Utils.h"
+
+
+// forward declarations of SQLiteCpp types we need
+namespace SQLite
+{
+  class Statement;
+  class Transaction;
+  class Database;
+}
 
 namespace Configuration
 {
@@ -34,7 +42,6 @@ namespace Configuration
       struct PrivateAccess;
     }
   }
-
 
   class ReadOnlyTransaction;
   class WriteableTransaction;
@@ -159,6 +166,9 @@ namespace Configuration
 
       using RandomNumberGenerator = std::unique_ptr<Detail::RandomNumberGenerator>;
 
+      using Database = std::unique_ptr<SQLite::Database>;
+      using Statement = std::unique_ptr<SQLite::Statement>;
+
       friend class ReadOnlyTransaction;
       friend class WriteableTransaction;
       
@@ -187,7 +197,7 @@ namespace Configuration
       void SetSetting(const std::string& name, const String& value);
       void SetSetting(const std::string& name, const Binary& value);
 
-      std::unique_ptr<SQLite::Statement> GetSetting(const std::string& name, int type = -1) const;
+      Statement GetSetting(const std::string& name, int type = -1) const;
 
       Integer GetSettingInt(const std::string& name) const;
       String GetSettingStr(const std::string& name) const;
@@ -262,7 +272,7 @@ namespace Configuration
       static const DefaultEntryType DefaultEntryValue;
 
       // variables
-      mutable SQLite::Database m_Database;
+      mutable Database m_Database;
 
       Integer m_DatabaseVersionMajor;
       Integer m_DatabaseVersionMinor;

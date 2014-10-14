@@ -20,6 +20,7 @@ CONFIGURATION_BOOST_INCL_GUARD_BEGIN
 #include <boost/random/uniform_int_distribution.hpp>
 CONFIGURATION_BOOST_INCL_GUARD_END
 
+#include "SQLiteCpp\SQLiteCpp.h"
 
 using namespace std;
 
@@ -128,56 +129,56 @@ namespace Configuration
 
   // TODO: check if we should use SQLITE_OPEN_NOMUTEX instead of SQLITE_OPEN_FULLMUTEX and/or if we can be really multi-thread save with SQLITE_OPEN_FULLMUTEX!?
   Store::Store(const wstring& fileName, bool create, wchar_t nameDelimiter)
-  : m_Database(WcharToUTF8(fileName), SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_READWRITE | (create ? SQLITE_OPEN_CREATE : 0)),
-  m_DatabaseVersionMajor(0), m_DatabaseVersionMinor(0), m_Delimiter()
+  : m_Database(make_unique<Database::element_type>(WcharToUTF8(fileName), SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_READWRITE | (create ? SQLITE_OPEN_CREATE : 0))),
+    m_DatabaseVersionMajor(0), m_DatabaseVersionMinor(0), m_Delimiter()
   {
 
     // set busy timeout
-    m_Database.setBusyTimeout(15000);  // max. wait is 15sec
+    m_Database->setBusyTimeout(15000);  // max. wait is 15sec
 
     // setup database basic database settings we can not change within a transaction
-    m_Database.exec("PRAGMA auto_vacuum = FULL");
-    m_Database.exec("PRAGMA synchronous = FULL");
-    m_Database.exec("PRAGMA foreign_keys = TRUE");
+    m_Database->exec("PRAGMA auto_vacuum = FULL");
+    m_Database->exec("PRAGMA synchronous = FULL");
+    m_Database->exec("PRAGMA foreign_keys = TRUE");
 
     // open writeable transaction
     WriteableTransaction transaction(*this);
 
     // setup database basic database settings
-    m_Database.exec("PRAGMA encoding           = \"UTF-8\"");
-    m_Database.exec("PRAGMA foreign_keys       = TRUE");
-    m_Database.exec("PRAGMA journal_mode       = DELETE");
-    m_Database.exec("PRAGMA locking_mode       = NORMAL");
-    m_Database.exec("PRAGMA recursive_triggers = TRUE");
-    m_Database.exec("PRAGMA secure_delete      = TRUE");
+    m_Database->exec("PRAGMA encoding           = \"UTF-8\"");
+    m_Database->exec("PRAGMA foreign_keys       = TRUE");
+    m_Database->exec("PRAGMA journal_mode       = DELETE");
+    m_Database->exec("PRAGMA locking_mode       = NORMAL");
+    m_Database->exec("PRAGMA recursive_triggers = TRUE");
+    m_Database->exec("PRAGMA secure_delete      = TRUE");
 
     // TODO: add code to check or create our database layout! (define structure only once!)
 
     // create tables
-    m_Database.exec("CREATE TABLE IF NOT EXISTS " + Table_Settings + "(" + Table_Settings_Column_Name +  " TEXT  PRIMARYKEY, " +
-                                                                           Table_Settings_Column_Value + " BLOB"
-                                                                  ")");
+    m_Database->exec("CREATE TABLE IF NOT EXISTS " + Table_Settings + "(" + Table_Settings_Column_Name +  " TEXT  PRIMARYKEY, " +
+                                                                            Table_Settings_Column_Value + " BLOB"
+                                                                      ")");
 
-    m_Database.exec("CREATE TABLE IF NOT EXISTS " + Table_Entries + "(" +
-                                                    Table_Entries_Column_Id +       " INTEGER  PRIMARY KEY, " +
-                                                    Table_Entries_Column_Parent +   " INTEGER  NOT NULL, " +
-                                                    Table_Entries_Column_Revision + " INTEGER  NOT NULL," +
-                                                    Table_Entries_Column_Name +     " TEXT     NOT NULL, " +
-                                                    Table_Entries_Column_Type +     " INTEGER  NOT NULL, " +
-                                                    Table_Entries_Column_Value +    " BLOB"  // we need NULL to store an empty BLOB ....
-                                                    ")");
+    m_Database->exec("CREATE TABLE IF NOT EXISTS " + Table_Entries + "(" +
+                                                     Table_Entries_Column_Id +       " INTEGER  PRIMARY KEY, " +
+                                                     Table_Entries_Column_Parent +   " INTEGER  NOT NULL, " +
+                                                     Table_Entries_Column_Revision + " INTEGER  NOT NULL," +
+                                                     Table_Entries_Column_Name +     " TEXT     NOT NULL, " +
+                                                     Table_Entries_Column_Type +     " INTEGER  NOT NULL, " +
+                                                     Table_Entries_Column_Value +    " BLOB"  // we need NULL to store an empty BLOB ....
+                                                     ")");
 
     // create index
-    m_Database.exec("CREATE INDEX IF NOT EXISTS " + Table_Entries_Name_Index + " ON " + Table_Entries + "(" + Table_Entries_Column_Name + ")");
+    m_Database->exec("CREATE INDEX IF NOT EXISTS " + Table_Entries_Name_Index + " ON " + Table_Entries + "(" + Table_Entries_Column_Name + ")");
 
-    m_Database.exec("CREATE INDEX IF NOT EXISTS " + Table_Entries_Parent_Index + " ON " + Table_Entries + "(" + Table_Entries_Column_Parent + ")");
+    m_Database->exec("CREATE INDEX IF NOT EXISTS " + Table_Entries_Parent_Index + " ON " + Table_Entries + "(" + Table_Entries_Column_Parent + ")");
 
-    m_Database.exec("CREATE UNIQUE INDEX IF NOT EXISTS " + Table_Entries_Name_Parent_Index + " ON " +
-                                                            Table_Entries + "(" + Table_Entries_Column_Name + "," + Table_Entries_Column_Parent + ")");
+    m_Database->exec("CREATE UNIQUE INDEX IF NOT EXISTS " + Table_Entries_Name_Parent_Index + " ON " +
+                                                             Table_Entries + "(" + Table_Entries_Column_Name + "," + Table_Entries_Column_Parent + ")");
   
     // check DB inegrity
-    m_Database.exec("PRAGMA integrity_check");
-    m_Database.exec("PRAGMA foreign_key_check");
+    m_Database->exec("PRAGMA integrity_check");
+    m_Database->exec("PRAGMA foreign_key_check");
 
     // root entry name must not be a valid name!
     assert(!IsValidName(UTF8ToWchar(Table_Entries_RootEntryName)));
@@ -800,7 +801,7 @@ namespace Configuration
     // TODO: thread safety!!
     if (!m_RandomNumberGenerator)
     {
-      m_RandomNumberGenerator = make_unique<Detail::RandomNumberGenerator>();
+      m_RandomNumberGenerator = make_unique<RandomNumberGenerator::element_type>();
     }
 
     return m_RandomNumberGenerator->Get();
@@ -1281,8 +1282,8 @@ namespace Configuration
     else
     {
       // open new transcation
-      transaction.reset(new SQLite::Transaction(m_Database, writeable ? SQLite::Transaction::TransactionType::Immediate :
-                                                                        SQLite::Transaction::TransactionType::Deferred));
+      transaction.reset(new SQLite::Transaction(*m_Database, writeable ? SQLite::Transaction::TransactionType::Immediate :
+                                                                         SQLite::Transaction::TransactionType::Deferred));
 
       m_Transaction = transaction;
       m_WriteableTransaction = writeable;
@@ -1370,13 +1371,13 @@ namespace Configuration
   }
 
   // TODO: refactor to use valueGetter functor
-  unique_ptr<SQLite::Statement> Store::GetSetting(const std::string& name, int type) const
+  Store::Statement Store::GetSetting(const std::string& name, int type) const
   {
     assert(m_Transaction.lock());
 
-    static const string Statement = "SELECT " + Table_Settings_Column_Value + " FROM " + Table_Settings +
-                                                                              " WHERE " + Table_Settings_Column_Name + " = ?1";
-    unique_ptr<SQLite::Statement> stm = make_unique<SQLite::Statement>(m_Database, Statement);
+    static const string StatementText = "SELECT " + Table_Settings_Column_Value + " FROM " + Table_Settings +
+                                                                                  " WHERE " + Table_Settings_Column_Name + " = ?1";
+    Statement stm = make_unique<Statement::element_type>(*m_Database, StatementText);
 
     stm->bind(1, name);
 
@@ -1414,7 +1415,7 @@ namespace Configuration
 
   Store::Binary Store::GetSettingBin(const string& name) const
   {
-    unique_ptr<SQLite::Statement> stm(GetSetting(name, SQLITE_BLOB));
+    Statement stm(GetSetting(name, SQLITE_BLOB));
 
     if (stm->isColumnNull(0))
     {
@@ -1432,7 +1433,7 @@ namespace Configuration
     StatementCache::const_iterator iter = m_StatementCache.find(statementText);
     if (iter == end(m_StatementCache))
     {
-      CachedStatement stm = make_shared<CachedStatement::element_type>(m_Database, statementText);
+      CachedStatement stm = make_shared<CachedStatement::element_type>(*m_Database, statementText);
 
       bool inserted;
       tie(ignore, inserted) = m_StatementCache.insert(make_pair(statementText, stm));
