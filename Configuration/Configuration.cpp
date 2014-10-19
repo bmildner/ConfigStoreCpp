@@ -28,7 +28,7 @@ using namespace std;
 namespace 
 {
   const string Table_Settings = "Settings";
-  const string Table_Entries = "Entries";
+  const string Table_Entries  = "Entries";
 
   const std::string Table_Settings_Column_Name  = "Name";
   const std::string Table_Settings_Column_Value = "Value";
@@ -104,7 +104,7 @@ namespace Configuration
     {
       public:
         RandomNumberGenerator()
-          : m_RandomDevice(), m_Distribution(numeric_limits<Store::Integer>::min(), numeric_limits<Store::Integer>::max())
+        : m_RandomDevice(), m_Distribution(numeric_limits<Store::Integer>::min(), numeric_limits<Store::Integer>::max())
         {}
 
         inline Store::Integer Get()
@@ -124,7 +124,7 @@ namespace Configuration
   const Store::String::value_type Store::DefaultNameDelimiter = L'.';
 
   const Store::ValueType        Store::DefaultEntryValueType = ValueType::Integer;
-  const Store::DefaultEntryType Store::DefaultEntryValue = 0;
+  const Store::DefaultEntryType Store::DefaultEntryValue     = 0;
 
 
   // TODO: check if we should use SQLITE_OPEN_NOMUTEX instead of SQLITE_OPEN_FULLMUTEX and/or if we can be really multi-thread save with SQLITE_OPEN_FULLMUTEX!?
@@ -999,8 +999,8 @@ namespace Configuration
 
     GetEntryValue(ParseName(name), ValueType::Binary, [&value](SQLite::Statement& stm) { if (!stm.isColumnNull(0)) 
                                                                                          {
-                                                                                           value.resize(stm.getColumn(0).size()); 
-                                                                                           memcpy(value.data(), stm.getColumn(0).getBlob(), value.size()); 
+                                                                                           value.resize(stm.getColumn(0).size());
+                                                                                           memcpy(value.data(), stm.getColumn(0).getBlob(), value.size());
                                                                                          }
                                                                                        });
 
