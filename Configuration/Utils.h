@@ -48,7 +48,7 @@ namespace Configuration
   // TODO: add support for nested exceptions! [? default template param + specialization of a helper we additionally derive from? :]
 
   template <typename Interface>
-  class ExceptionImpl : public Interface, public virtual std::exception
+  class ExceptionImpl final: public Interface, public virtual std::exception
   {
     public:
       explicit ExceptionImpl(const std::wstring& what)

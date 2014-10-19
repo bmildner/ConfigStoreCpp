@@ -53,6 +53,7 @@ namespace Configuration
   // TODO: add change notification using call-back
   // TODO: add possibility to open Store from readonly database file (file attribute + filesystem access control)
   // TODO: add overloads for public interface taking path+name (avoid string concatination, concatinate id path internally!)
+  // TODO: add possibility to specify max DB timeout value and probably also add a retry mechanism (not sure if really needed...)
 
   // not multi-thread safe due to limitation in SQLite!
   // create Store instance for each thread
@@ -67,20 +68,32 @@ namespace Configuration
 
       enum class ValueType {Integer = 1, String = 2, Binary = 3};
 
-      struct Revision
+      class Revision final
       {
-        inline Revision(Integer id = 0, Integer revision = 0) noexcept
-        : m_Id(id), m_Revision(revision)
-        {}
+        public:
+          inline explicit Revision(Integer id = 0, Integer revision = 0) noexcept
+          : m_Id(id), m_Revision(revision)
+          {}
 
-        inline bool operator==(const Revision& rhs) const noexcept { return (m_Id == rhs.m_Id) && (m_Revision == rhs.m_Revision); }
-        inline bool operator!=(const Revision& rhs) const noexcept { return !(*this == rhs); }
+          inline bool operator==(const Revision& rhs) const noexcept 
+          {
+            return (m_Id == rhs.m_Id) && (m_Revision == rhs.m_Revision);
+          }
 
-        Integer m_Id;
-        Integer m_Revision;
+          inline bool operator!=(const Revision& rhs) const noexcept 
+          { 
+            return !(*this == rhs);
+          }
+
+        private:
+          friend Configuration::Store;
+
+          Integer m_Id;
+          Integer m_Revision;
       };
 
       static const String::value_type DefaultNameDelimiter;
+
 
       // opens existing configuration store
       explicit Store(const std::wstring& fileName, bool create = false, wchar_t nameDelimiter = DefaultNameDelimiter);
@@ -209,7 +222,7 @@ namespace Configuration
 
       using IdList = std::vector<Integer>;
       static_assert((sizeof(IdList::value_type) * 8) >= 64, "Entry ids must be at least 64 bits wide");
-      static_assert(std::is_same<IdList::value_type, Store::Integer>::value, "We currently require Entry ids to be Store::Integer, implementation detail");
+      static_assert(std::is_same<IdList::value_type, Store::Integer>::value, "We currently require entry ids to be Store::Integer, implementation detail");
 
 
       Path Store::ParseName(const Store::String& name) const;

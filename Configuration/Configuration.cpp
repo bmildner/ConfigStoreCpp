@@ -44,7 +44,7 @@ namespace
   const std::string Table_Entries_Parent_Index      = "TableEntries_Parent";
   const std::string Table_Entries_Name_Parent_Index = "TableEntries_Name_Parent";
 
-  // turns out that the name our of root entry _must not_ be a valid name for our store!
+  // turns out that the name of our root entry _must not_ be a valid name for our store!
   // violating this causes constraint violations on the database!!
   const std::string Table_Entries_RootEntryName = "";
 
@@ -1094,17 +1094,17 @@ namespace Configuration
 
   bool Store::IsInteger(const String& name) const
   {
-    return (GetEntryType(ParseName(name)) == ValueType::Integer);
+    return GetEntryType(ParseName(name)) == ValueType::Integer;
   }
 
   bool Store::IsString(const String& name) const
   {
-    return (GetEntryType(ParseName(name)) == ValueType::String);
+    return GetEntryType(ParseName(name)) == ValueType::String;
   }
 
   bool Store::IsBinary(const String& name) const
   {
-    return (GetEntryType(ParseName(name)) == ValueType::Binary);
+    return GetEntryType(ParseName(name)) == ValueType::Binary;
   }
 
   Store::ValueType Store::GetEntryType(const Path& path) const
