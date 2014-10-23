@@ -607,8 +607,8 @@ namespace
     auto store = CreateEmptyStore();
 
     using TrackedRevison = pair<Store::Revision, Store::Revision>;  // .first == old value, .second == new/currrent value; (.first == .second) => not changed
-    auto reset = [](TrackedRevison& rev) { rev.first = rev.second; };
     auto changed = [](const TrackedRevison& rev) -> bool { return rev.first != rev.second; };
+    auto reset = [](TrackedRevison& rev) { rev.first = rev.second; };
 
     // check for name validation (empty == root)
     UNITTEST_ASSERT_THROWS(store->GetRevision(L".."), InvalidName);

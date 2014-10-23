@@ -45,6 +45,33 @@ int main()
       trans.Commit();
     }    
 
+    if (!store.Exists(L"Int"))
+    {
+      store.Create(L"Int", 4711);
+    }
+    else
+    {
+      store.GetInteger(L"Int");
+    }
+
+    if (!store.Exists(L"Str"))
+    {
+      store.Create(L"Str", L"value");
+    }
+    else
+    {
+      store.GetString(L"Str");
+    }
+
+    if (!store.Exists(L"Bin"))
+    {
+      store.Create(L"Bin", Configuration::Store::Binary(16, 0xcd));
+    }
+    else
+    {
+      store.GetBinary(L"Bin");
+    }
+
     Configuration::Store::Revision rev = store.GetRevision();
 
     if (rev != store.GetRevision())

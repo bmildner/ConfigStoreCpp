@@ -54,6 +54,7 @@ namespace Configuration
   // TODO: add possibility to open Store from readonly database file (file attribute + filesystem access control)
   // TODO: add overloads for public interface taking path+name (avoid string concatination, concatinate id path internally!)
   // TODO: add possibility to specify max DB timeout value and probably also add a retry mechanism (not sure if really needed...)
+  // TODO: probably add a Get() function that returns boost::any objects???
 
   // not multi-thread safe due to limitation in SQLite!
   // create Store instance for each thread
@@ -68,7 +69,7 @@ namespace Configuration
 
       enum class ValueType {Integer = 1, String = 2, Binary = 3};
 
-      class Revision final
+      class Revision
       {
         public:
           inline explicit Revision(Integer id = 0, Integer revision = 0) noexcept
@@ -121,11 +122,11 @@ namespace Configuration
       bool IsInteger(const String& name) const;      
       bool IsBinary(const String& name) const;
 
-      // empty name == root, revision of the whole store
+      // empty name == root, -> revision of the whole store
       // there are corner-cases where a change may not be detected:
       //   if the revision of the entry was bumped exactly 2^(sizeof(<internal revision representation>) * 8) times in the meantime
       //   if the entry has been deleted and re-created in the meantime AND the new entry happens to have the same id AND the same revision by accident
-      // -> next to impossible in finite time and space given that entry ids and revisions internally are at least 64 bit wide
+      //   -> next to impossible in finite time and space given that entry ids and revisions internally are at least 64 bit wide
       Revision GetRevision(const String& name = L"") const;
 
       // empty name == root

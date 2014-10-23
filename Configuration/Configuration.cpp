@@ -979,6 +979,7 @@ namespace Configuration
   {
     String value;
 
+    // Note: SQLite will automatically convert NULL to "" (empty string)
     GetEntryValue(ParseName(name), ValueType::String, [&value](SQLite::Statement& stm) { value = UTF8ToWchar(stm.getColumn(0).getText()); });
 
     return value;
@@ -988,6 +989,7 @@ namespace Configuration
   {
     Integer value;
 
+    // Note: SQLite will automatically convert NULL to 0
     GetEntryValue(ParseName(name), ValueType::Integer, [&value](SQLite::Statement& stm) { value = stm.getColumn(0).getInt64(); });
 
     return value;
@@ -1430,6 +1432,7 @@ namespace Configuration
 
   Store::CachedStatement Store::GetStatement(const std::string& statementText) const
   {
+    // TODO: explore performance/efficiency impact of using a sorted vector and binary search instead of a map!
     StatementCache::const_iterator iter = m_StatementCache.find(statementText);
     if (iter == end(m_StatementCache))
     {
