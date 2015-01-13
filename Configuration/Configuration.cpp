@@ -16,9 +16,9 @@
 CONFIGURATION_BOOST_INCL_GUARD_BEGIN
 #include <boost/format.hpp>
 #include <boost/tokenizer.hpp>
-#include <boost/random/random_device.hpp>
-#include <boost/random/uniform_int_distribution.hpp>
 CONFIGURATION_BOOST_INCL_GUARD_END
+
+#include "RandomNumberGenerator.h"
 
 #include "SQLiteCpp\SQLiteCpp.h"
 
@@ -98,26 +98,6 @@ namespace SQLite
 
 namespace Configuration
 {
-  namespace Detail
-  {
-    class RandomNumberGenerator
-    {
-      public:
-        RandomNumberGenerator()
-        : m_RandomDevice(), m_Distribution(numeric_limits<Store::Integer>::min(), numeric_limits<Store::Integer>::max())
-        {}
-
-        inline Store::Integer Get()
-        {
-          return m_Distribution(m_RandomDevice);
-        }
-
-      private:
-        boost::random::random_device                            m_RandomDevice;
-        boost::random::uniform_int_distribution<Store::Integer> m_Distribution;
-    };
-  }
-
   const Store::Integer Store::CurrentMajorVersion = 1;
   const Store::Integer Store::CurrentMinorVersion = 0;
 
@@ -659,7 +639,7 @@ namespace Configuration
   
   Store::Integer Store::GetEntryRevision(Integer id) const
   {
-    static_assert((sizeof(decltype(GetEntryRevision(0))) * 8) >= 64, 
+    static_assert((sizeof(GetEntryRevision(0)) * 8) >= 64, 
                   "Revision returned by GetEntryRevision() must be at least 64 bits wide");
     static_assert(is_same<decltype(GetEntryRevision(0)), Store::Integer>::value,
                   "We currently require GetEntryRevision() to return an Store::Integer, implementation detail");
@@ -1467,7 +1447,8 @@ namespace Configuration
   {
     if (!m_Transaction.unique())
     {
-      m_SavepointName = (boost::format("Config_Store_%1%") % static_cast<void*>(this)).str();
+      // TODO: check if we really need the process token! (= are savepoints process local or db global?)
+      m_SavepointName = (boost::format("Config_Store_%1%_%2%") % GetProcessToken() % static_cast<void*>(this)).str();
       m_Transaction->SetSavepoint(m_SavepointName);
     }
   }

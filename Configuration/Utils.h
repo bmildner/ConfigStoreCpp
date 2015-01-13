@@ -6,8 +6,10 @@
 
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <type_traits>
+#include <limits>
 
 #ifndef noexcept
 /// Compatibility with non-clang compilers.
@@ -87,6 +89,14 @@ namespace Configuration
 
   std::string WideToNarrowStr(const std::wstring& wide, char replacementChar = '?');
   std::wstring NarrowToWideStr(const std::string& narrow);
+
+  using ProcessToken = std::uint64_t;
+
+  ProcessToken GetProcessToken();
+
+  static_assert(std::is_same<ProcessToken, decltype(GetProcessToken())>::value, "GetProcessToken() must return a ProcessToken");
+  static_assert((sizeof(GetProcessToken()) * 8) >= 64, "GetProcessToken() needs to return at least 64 bits");
+
 }
 
 #endif

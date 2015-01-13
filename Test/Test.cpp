@@ -9,13 +9,29 @@
 
 #include "UnitTest.h"
 
+#include "Configuration\SortedVector.h"
+
 enum class Type {Path, Integer, String, Binary, Object};
 
 
 using namespace std;
 
+template class Configuration::Detail::sorted_vector<int>;
+template class Configuration::Detail::sorted_vector<wstring>;
+
 int main()
 {
+  using Configuration::Detail::sorted_vector;
+
+  sorted_vector<int> intVecSorted;
+  sorted_vector<int> intVecSorted2;
+
+  swap(intVecSorted, intVecSorted2);
+
+  sorted_vector<wstring> strVecSorted;
+
+  strVecSorted.emplace_back(L"");
+
   try
   {
     Configuration::Store store(L"Config.dat", true);

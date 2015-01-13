@@ -18,7 +18,6 @@
 
 #include "Utils.h"
 
-
 // forward declarations of SQLiteCpp types we need
 namespace SQLite
 {
@@ -31,6 +30,7 @@ namespace Configuration
 {
   namespace Detail
   {
+    template <typename Integer>
     class RandomNumberGenerator;
   }
 
@@ -57,7 +57,7 @@ namespace Configuration
   // TODO: probably add a Get() function that returns boost::any objects???
 
   // not multi-thread safe due to limitation in SQLite!
-  // create Store instance for each thread
+  // create a Store instance for each thread!
   class Store : private boost::noncopyable
   {
     public:
@@ -112,6 +112,7 @@ namespace Configuration
       {
         return IsValidName(name, m_Delimiter);
       }
+
       // only use if you really have to validate a name w/o an Store object in hand!
       static bool IsValidName(const String& name, String::value_type delimiter);
 
@@ -178,7 +179,7 @@ namespace Configuration
       using CachedStatement = std::shared_ptr<SQLite::Statement>;
       using StatementCache = std::map<std::string, CachedStatement>;
 
-      using RandomNumberGenerator = std::unique_ptr<Detail::RandomNumberGenerator>;
+      using RandomNumberGenerator = std::unique_ptr<Detail::RandomNumberGenerator<Integer>>;
 
       using Database = std::unique_ptr<SQLite::Database>;
       using Statement = std::unique_ptr<SQLite::Statement>;
@@ -374,6 +375,5 @@ namespace Configuration
   struct InvalidDelimiterSetting : InvalidConfiguration {};
 
 }
-
 
 #endif
