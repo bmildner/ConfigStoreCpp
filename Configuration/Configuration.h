@@ -188,7 +188,9 @@ namespace Configuration
       friend class WriteableTransaction;
       
       // this is a somewhat dirty trick to get access to private members in Store objects ...
+#ifdef CONFIGURATION_UNITTEST_ENABLE_PRIVATEACCESS
       friend struct Configuration::UnitTest::Detail::PrivateAccess;
+#endif
 
       // returns true if delimiter is not found in any name currentl present in the store
       // returning true implies that SetNewDelimiter() with the given delimiter will be successful
@@ -341,11 +343,13 @@ namespace Configuration
 
   struct Exception : virtual std::exception, ExceptionInterface {};
 
+
   struct RuntimeError : Exception {};
   
   struct NotFound :          RuntimeError {};
   struct SettingNotFound :   NotFound {};
   struct EntryNotFound :     NotFound {};
+
   struct InvalidName :       RuntimeError {};
   struct NameAlreadyExists : RuntimeError {};
   struct HasChildEntry :     RuntimeError {};

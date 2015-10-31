@@ -170,9 +170,17 @@ namespace
       exceptionInfo = L"out any exception beeing caught";
     }
 
-    catch (const ExceptionImpl<Exception>&)
+    catch (const ExceptionImpl<Exception>& e)
     {
-      result = true;
+      // check for exact exception type match!
+      if (typeid(e) == typeid(ExceptionImpl<Exception>))
+      {
+        result = true;
+      }
+      else
+      {
+        exceptionInfo = ExceptionToString();
+      }
     }
 
     catch (...)

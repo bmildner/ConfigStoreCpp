@@ -22,7 +22,7 @@
 # elif defined(__clang__) && __has_feature(cxx_noexcept)
 // Clang 3.0 and above have noexcept
 # elif defined(_MSC_VER) && (_MSC_VER >= 1900)
-// MSVC 2014 and above should have noexcept!?
+// MSVC 2015 and above should have noexcept!?
 # else
 #  define noexcept throw()
 # endif
